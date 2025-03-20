@@ -7,10 +7,16 @@ from torch.utils.data import DataLoader
 from torchvision.models.vision_transformer import vit_b_16
 from bayesian_torch.models.dnn_to_bnn import get_kl_loss
 from custom_dnn_to_bnn import dnn_to_bnn
+import torch.nn.utils.prune as prune
 import argparse
 
 parser = argparse.ArgumentParser(description="A simple argparse example")
 parser.add_argument("--bayesian",action="store_true")
+parser.add_argument("--epochs",type=int,default=5)
+parser.add_argument("--noise_diff",action="store_true")
+parser.add_argument("--noise_scale",type=float,default=1.0)
+parser.add_argument("--prune",action="store_true")
+parser.add_argument("--limit_per_epoch",type=int,default=1000000)
 
 const_bnn_prior_parameters = {
         "prior_mu": 0.0,
@@ -63,11 +69,13 @@ def main(args):
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
 
     # Training loop
-    num_epochs = 5
+    num_epochs = args.epochs
     for epoch in range(num_epochs):
         model.train()
         running_loss = 0.0
-        for images, labels in train_loader:
+        for b, (images, labels) in enumerate(train_loader):
+            if b>=args.limit_per_epoch:
+                break
             images, labels = images.to(device), labels.to(device)
 
             # Forward pass
@@ -75,6 +83,12 @@ def main(args):
             loss = criterion(outputs, labels)
             if args.bayesian:
                 loss+=get_kl_loss(model)
+
+            if args.noise_diff:
+                noise=torch.randn(images.size()).to(device)
+                noisy_outputs=model(noise)
+                reverse_loss=criterion(noisy_outputs,labels)
+                loss-=reverse_loss
 
             # Backward pass
             optimizer.zero_grad()
@@ -84,6 +98,8 @@ def main(args):
             running_loss += loss.item()
 
         print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {running_loss/len(train_loader):.4f}")
+        #if args.prune:
+
 
     # Evaluate accuracy
     model.eval()
