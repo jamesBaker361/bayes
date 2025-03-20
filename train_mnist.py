@@ -5,7 +5,8 @@ import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 from torch.utils.data import DataLoader
 from torchvision.models.vision_transformer import vit_b_16
-from bayesian_torch.models.dnn_to_bnn import dnn_to_bnn, get_kl_loss
+from bayesian_torch.models.dnn_to_bnn import get_kl_loss
+from custom_dnn_to_bnn import dnn_to_bnn
 import argparse
 
 parser = argparse.ArgumentParser(description="A simple argparse example")
