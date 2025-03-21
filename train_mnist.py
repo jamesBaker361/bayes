@@ -19,6 +19,8 @@ parser.add_argument("--prune",action="store_true")
 parser.add_argument("--limit_per_epoch",type=int,default=1000000)
 parser.add_argument("--zeros",action="store_true")
 parser.add_argument("--zeros_scale",type=float,default=0.1)
+parser.add_argument("--save_name",default="model",type=str)
+parser.add_argument("--save",action="store_true")
 
 const_bnn_prior_parameters = {
         "prior_mu": 0.0,
