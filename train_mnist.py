@@ -14,9 +14,11 @@ parser = argparse.ArgumentParser(description="A simple argparse example")
 parser.add_argument("--bayesian",action="store_true")
 parser.add_argument("--epochs",type=int,default=5)
 parser.add_argument("--noise_diff",action="store_true")
-parser.add_argument("--noise_scale",type=float,default=1.0)
+parser.add_argument("--noise_scale",type=float,default=0.1)
 parser.add_argument("--prune",action="store_true")
 parser.add_argument("--limit_per_epoch",type=int,default=1000000)
+parser.add_argument("--zeros",action="store_true")
+parser.add_argument("--zeros_scale",type=float,default=0.1)
 
 const_bnn_prior_parameters = {
         "prior_mu": 0.0,
@@ -87,7 +89,13 @@ def main(args):
             if args.noise_diff:
                 noise=torch.randn(images.size()).to(device)
                 noisy_outputs=model(noise)
-                reverse_loss=criterion(noisy_outputs,labels)
+                reverse_loss=args.noise_scale*criterion(noisy_outputs,labels)
+                loss-=reverse_loss
+
+            if args.zeros:
+                zeros=torch.zeros(images.size()).to(device)
+                zero_outputs=model(zeros)
+                reverse_loss=args.zeros_scale*criterion(zero_outputs,labels)
                 loss-=reverse_loss
 
             # Backward pass
@@ -98,7 +106,9 @@ def main(args):
             running_loss += loss.item()
 
         print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {running_loss/len(train_loader):.4f}")
-        #if args.prune:
+        if args.prune:
+            prune_method=prune.L1Unstructured(0.2)
+            prune_method.apply(model,"weight",0.2)
 
 
     # Evaluate accuracy
