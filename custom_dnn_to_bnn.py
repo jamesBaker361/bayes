@@ -4,7 +4,12 @@ from bayesian_torch.models.dnn_to_bnn import (
     bnn_conv_layer,
     bnn_lstm_layer
 )
+import torch
+import torch.functional as F
 from torch.nn.modules.linear import NonDynamicallyQuantizableLinear,Linear
+from torch import nn,Tensor
+from bayesian_torch.layers.variational_layers.linear_variational import LinearReparameterization
+from bayesian_torch.layers.base_variational_layer import BaseVariationalLayer_
 
 def bnn_linear_layer(params, d):
     layer_type = d.__class__.__name__ + params["type"]
@@ -62,3 +67,54 @@ def dnn_to_bnn(m, bnn_prior_parameters):
         else:
             pass
     return
+
+def delta_forward_linear(self:LinearReparameterization,input:Tensor,rho:Tensor)-> Tensor:
+    if self.dnn_to_bnn_flag:
+        return_kl = False
+    sigma_weight = torch.log1p(torch.exp(rho))
+    eps_weight = self.eps_weight.data.normal_()
+    tmp_result = sigma_weight * eps_weight
+    weight = self.mu_weight + tmp_result
+
+
+    if return_kl:
+        kl_weight = self.kl_div(self.mu_weight, sigma_weight,
+                                self.prior_weight_mu, self.prior_weight_sigma)
+    bias = None
+
+    if self.mu_bias is not None:
+        sigma_bias = torch.log1p(torch.exp(self.rho_bias))
+        bias = self.mu_bias + (sigma_bias * self.eps_bias.data.normal_())
+        if return_kl:
+            kl_bias = self.kl_div(self.mu_bias, sigma_bias, self.prior_bias_mu,
+                                    self.prior_bias_sigma)
+
+    out = F.linear(input, weight, bias)
+
+    if self.quant_prepare:
+        # quint8 quantstub
+        input = self.quint_quant[0](input) # input
+        out = self.quint_quant[1](out) # output
+
+        # qint8 quantstub
+        sigma_weight = self.qint_quant[0](sigma_weight) # weight
+        mu_weight = self.qint_quant[1](self.mu_weight) # weight
+        eps_weight = self.qint_quant[2](eps_weight) # random variable
+        tmp_result =self.qint_quant[3](tmp_result) # multiply activation
+        weight = self.qint_quant[4](weight) # add activatation
+
+
+    if return_kl:
+        if self.mu_bias is not None:
+            kl = kl_weight + kl_bias
+        else:
+            kl = kl_weight
+
+        return out, kl
+
+    return out
+
+def delta_forward_sequential(model :nn.Module,x:Tensor,rho_list:list[Tensor])-> Tensor:
+    for i,layer in [layer for layer in enumerate(model.children) if  isinstance(layer,BaseVariationalLayer_ )]:
+        x=delta_forward_linear(layer,x,rho_list[i])
+    return x
