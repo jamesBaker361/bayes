@@ -57,7 +57,12 @@ transform = transforms.Compose([
 def main(args):
 
     if args.basic_model:
-        transform=lambda x: x
+        transform=transforms.Compose([
+            transforms.ToTensor(),
+            lambda img: img.repeat(3,1,1),
+            transforms.Normalize((0.5,), (0.5,)) , # Normalize to [-1, 1]
+            lambda x: x.reshape(-1)
+        ])
     else:
         # Transformations (ViT requires 224x224 images)
         transform = transforms.Compose([
