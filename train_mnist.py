@@ -9,6 +9,7 @@ from bayesian_torch.models.dnn_to_bnn import get_kl_loss
 from custom_dnn_to_bnn import dnn_to_bnn
 import torch.nn.utils.prune as prune
 import argparse
+from random import random
 
 parser = argparse.ArgumentParser(description="A simple argparse example")
 parser.add_argument("--bayesian",action="store_true")
@@ -21,6 +22,9 @@ parser.add_argument("--zeros",action="store_true")
 parser.add_argument("--zeros_scale",type=float,default=0.1)
 parser.add_argument("--save_name",default="model",type=str)
 parser.add_argument("--save",action="store_true")
+parser.add_argument("--save_gradients",action="store_true")
+parser.add_argument("--noisy_input",action="store_true")
+parser.add_argument("--basic_model",action="store_true")
 
 const_bnn_prior_parameters = {
         "prior_mu": 0.0,
@@ -59,9 +63,18 @@ def main(args):
     train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
 
-    # Load ViT model and modify the output layer
-    model = vit_b_16(pretrained=False)  # Using ViT base with 16x16 patches
-    model.heads = nn.Linear(model.hidden_dim, 10)  # MNIST has 10 classes
+    if args.basic_model:
+        model=nn.Sequential(
+            nn.Linear(28*28,128),
+            nn.LeakyReLU(),
+            nn.Linear(128,64),
+            nn.LeakyReLU(),
+            nn.Linear(64,10)
+        )
+    else:
+        # Load ViT model and modify the output layer
+        model = vit_b_16(pretrained=False)  # Using ViT base with 16x16 patches
+        model.heads = nn.Linear(model.hidden_dim, 10)  # MNIST has 10 classes
     if args.bayesian:
         dnn_to_bnn(model, const_bnn_prior_parameters)
     model = model.to(device)
@@ -81,6 +94,11 @@ def main(args):
             if b>=args.limit_per_epoch:
                 break
             images, labels = images.to(device), labels.to(device)
+
+            if args.noisy_input:
+                scale=random()
+                noise=torch.randn(images.size()).to(device)
+                images=(scale*images)+((1-scale)*noise)
 
             # Forward pass
             outputs = model(images)
@@ -104,6 +122,10 @@ def main(args):
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+
+            '''step_grads = {name: param.grad.clone().detach() for name, param in model.named_parameters() if param.grad is not None}
+            for key,value in step_grads.items():
+                print(key,value.size())'''
 
             running_loss += loss.item()
 
