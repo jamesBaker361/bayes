@@ -56,6 +56,18 @@ transform = transforms.Compose([
 
 def main(args):
 
+    if args.basic_model:
+        transform=lambda x: x
+    else:
+        # Transformations (ViT requires 224x224 images)
+        transform = transforms.Compose([
+            transforms.Resize((224, 224)),  # ViT expects 224x224 images
+            transforms.ToTensor(),
+            lambda img: img.repeat(3,1,1),
+            transforms.Normalize((0.5,), (0.5,))  # Normalize to [-1, 1]
+
+        ])
+
     # Load MNIST dataset
     train_dataset = datasets.MNIST(root='./data', train=True, transform=transform, download=True)
     test_dataset = datasets.MNIST(root='./data', train=False, transform=transform, download=True)
