@@ -6,10 +6,13 @@ import torchvision.datasets as datasets
 from torch.utils.data import DataLoader
 from torchvision.models.vision_transformer import vit_b_16
 from bayesian_torch.models.dnn_to_bnn import get_kl_loss
-from custom_dnn_to_bnn import dnn_to_bnn
+from custom_dnn_to_bnn import dnn_to_bnn,delta_forward_sequential
 import torch.nn.utils.prune as prune
 import argparse
+from bayesian_torch.layers.variational_layers.linear_variational import LinearReparameterization
 from random import random
+from rho_estimator import RhoEstimatorLinear
+from math import sqrt
 
 parser = argparse.ArgumentParser(description="A simple argparse example")
 parser.add_argument("--bayesian",action="store_true")
@@ -25,6 +28,9 @@ parser.add_argument("--save",action="store_true")
 parser.add_argument("--save_gradients",action="store_true")
 parser.add_argument("--noisy_input",action="store_true")
 parser.add_argument("--basic_model",action="store_true")
+parser.add_argument("--alternate_training",action="store_true")
+parser.add_argument("--noise_embedding_dim",type=int,default=16)
+parser.add_argument("--n_hidden_layers",type=int,default=2)
 
 const_bnn_prior_parameters = {
         "prior_mu": 0.0,
@@ -97,6 +103,32 @@ def main(args):
 
     print(f"model size {get_model_size(model)}")
 
+    if args.noisy_input and args.alternate_training and args.bayesian:
+        noise_embedding_model=nn.Sequential(
+            nn.Linear(3,8),
+            nn.LeakyReLU(),
+            nn.Linear(8,args.noise_embedding_dim),
+            nn.Sigmoid()
+        )
+
+        print(f"noise_embedding_model size {get_model_size(noise_embedding_model)}")
+
+        rho_model_list=[]
+        rho_parameters=[p for p in noise_embedding_model.parameters()]
+
+        bayesian_layers=[layer for layer in model.children() if isinstance(layer,LinearReparameterization )]
+
+        for layer in bayesian_layers:
+            n_parameters=layer.in_features*layer.out_features
+            rho_model=RhoEstimatorLinear(n_parameters,args.noise_embedding_dim,args.n_hidden_layers)
+            rho_parameters+=[p for p in rho_model.parameters()]
+            rho_model_list.append(rho_model)
+            print("rho model size ",get_model_size(rho_model) )
+
+        alternate_optimizer=optim.Adam(rho_parameters,lr=1e-4)
+
+            
+
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
@@ -112,32 +144,57 @@ def main(args):
             images, labels = images.to(device), labels.to(device)
 
             if args.noisy_input:
-                scale=random()
+                image_scale=[random() for r in range(64)]
+                noise_scale=[1-r for r in image_scale]
                 noise=torch.randn(images.size()).to(device)
-                images=(scale*images)+((1-scale)*noise)
+                images=images*image_scale[:,None]  +noise*noise_scale[:,None]
 
-            # Forward pass
-            outputs = model(images)
-            loss = criterion(outputs, labels)
-            if args.bayesian:
-                loss+=get_kl_loss(model)
+            if args.alternate_training and b%10==2:
+                model.eval()
+                noise_embedding_model.train()
+                for rho_model in rho_model_list:
+                    rho_model.train()
+                kernelized_noise=torch.tensor([[scale,sqrt(scale),scale**2] for scale in noise_scale]).to(device)
+                noise_embedding=noise_embedding_model(kernelized_noise)
 
-            if args.noise_diff:
-                noise=torch.randn(images.size()).to(device)
-                noisy_outputs=model(noise)
-                reverse_loss=args.noise_scale*criterion(noisy_outputs,labels)
-                loss-=reverse_loss
+                rho_list=[]
 
-            if args.zeros:
-                zeros=torch.zeros(images.size()).to(device)
-                zero_outputs=model(zeros)
-                reverse_loss=args.zeros_scale*criterion(zero_outputs,labels)
-                loss-=reverse_loss
+                for rho_model,b_layer in zip(rho_model_list, bayesian_layers):
+                    rho_list.append(rho_model(b_layer.rho_weight, noise_embedding))
+                
+                outputs=delta_forward_sequential(model,images,rho_list)
 
-            # Backward pass
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+                loss=criterion(outputs,labels)
+                alternate_optimizer.zero_grad()
+                loss.backward()
+                alternate_optimizer.step()
+            else:
+                model.train()
+                noise_embedding_model.eval()
+                for rho_model in rho_model_list:
+                    rho_model.eval()
+                # Forward pass
+                outputs = model(images)
+                loss = criterion(outputs, labels)
+                if args.bayesian:
+                    loss+=get_kl_loss(model)
+
+                if args.noise_diff:
+                    noise=torch.randn(images.size()).to(device)
+                    noisy_outputs=model(noise)
+                    reverse_loss=args.noise_scale*criterion(noisy_outputs,labels)
+                    loss-=reverse_loss
+
+                if args.zeros:
+                    zeros=torch.zeros(images.size()).to(device)
+                    zero_outputs=model(zeros)
+                    reverse_loss=args.zeros_scale*criterion(zero_outputs,labels)
+                    loss-=reverse_loss
+
+                # Backward pass
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
 
             '''step_grads = {name: param.grad.clone().detach() for name, param in model.named_parameters() if param.grad is not None}
             for key,value in step_grads.items():
