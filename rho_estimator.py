@@ -4,7 +4,7 @@ class RhoEstimatorLinear(torch.nn.Module):
     def __init__(self, n_parameters:int,noise_embedding_n:int,n_hidden_layers:int):
         self.n_parameters=n_parameters
         self.noise_embedding_n=noise_embedding_n
-        step=2*n_parameters//(n_hidden_layers+1)
+        step=n_parameters//(n_hidden_layers*2)
         encoder_layers=[]
         in_layers=n_parameters
         for k in range(n_hidden_layers):
