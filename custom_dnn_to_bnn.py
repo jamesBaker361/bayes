@@ -115,6 +115,6 @@ def delta_forward_linear(self:LinearReparameterization,input:Tensor,rho:Tensor)-
     return out
 
 def delta_forward_sequential(model :nn.Module,x:Tensor,rho_list:list[Tensor])-> Tensor:
-    for i,layer in [layer for layer in enumerate(model.children) if  isinstance(layer,BaseVariationalLayer_ )]:
+    for i,layer in [layer for layer in enumerate(model.children) if  isinstance(layer,LinearReparameterization)]:
         x=delta_forward_linear(layer,x,rho_list[i])
     return x
