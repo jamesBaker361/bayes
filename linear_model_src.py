@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from torchvision.models.vision_transformer import vit_b_16
 import argparse
 class NoiseLinear(nn.Module):
-    def __init__(self, forward_embedding_size: int, device: str):
+    def __init__(self, forward_embedding_size: int, device: str="cpu"):
         super().__init__()  # Properly initialize nn.Module
         self.forward_embedding_size = forward_embedding_size
         self.device = device
