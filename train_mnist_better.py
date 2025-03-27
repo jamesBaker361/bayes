@@ -16,6 +16,7 @@ parser.add_argument("--training_stage_1_epochs",type=int,default=5)
 parser.add_argument("--forward_embedding_size",type=int,default=8)
 parser.add_argument("--limit_per_epoch",type=int,default=100000)
 parser.add_argument("--batch_size",type=int,default=64)
+parser.add_argument("--no_prior",action="store_true")
 
 def get_model_size(model):
     param_size = sum(p.numel() * p.element_size() for p in model.parameters())  # Parameters size
@@ -91,6 +92,7 @@ def main(args):
                 correct += (predicted == labels).sum().item()
     
         print(f"Test Accuracy: {100 * correct / total:.2f}%")
+        print(f"{100 * correct / total:.2f}%")
 
     test()
 
@@ -119,6 +121,8 @@ def main(args):
 
             layer_noise=[]
             for prior in weight_list:
+                if args.no_prior:
+                    prior_tensor=torch.zeros((args.batch_size,2))
                 prior_tensor=torch.tensor([prior for _ in range(args.batch_size)])
                 embedding_input=torch.cat([prior_tensor,noise_scale.view(args.batch_size,1)],dim=1)
                 embedding_input.to(device)
@@ -142,4 +146,3 @@ if __name__=="__main__":
     args=parser.parse_args()
     print(args)
     main(args)
-    print("all done :)")
