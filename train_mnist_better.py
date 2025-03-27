@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from torchvision.models.vision_transformer import vit_b_16
 import argparse
 from linear_model_src import NoiseLinear
-import random
+from random import random
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 parser = argparse.ArgumentParser(description="A simple argparse example")
