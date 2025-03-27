@@ -43,8 +43,8 @@ def main(args):
     train_dataset = datasets.MNIST(root='./data', train=True, transform=transform, download=True)
     test_dataset = datasets.MNIST(root='./data', train=False, transform=transform, download=True)
 
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,drop_last=True)
+    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False,drop_last=True)
 
     model=NoiseLinear(args.forward_embedding_size,device)
     
@@ -103,7 +103,6 @@ def main(args):
             image_scale = torch.rand(args.batch_size, device=device)  # Shape: [batch_size]
             noise_scale = 1 - image_scale  # Complementary scaling
             noise=torch.randn(images.size()).to(device)
-            print(images.size(),image_scale.view(-1, 1).size())
             images = images * image_scale.view(-1, 1) + noise * noise_scale.view(-1, 1)
 
 
