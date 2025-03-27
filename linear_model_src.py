@@ -43,7 +43,7 @@ class NoiseLinear(nn.Module):
     
     def parameters(self):
         p=[]
-        for layer in self.layer_list():
+        for layer in self.layer_list:
             if type(layer)==nn.Linear:
                 p+=[param for param in layer.parameters()]
         return p
