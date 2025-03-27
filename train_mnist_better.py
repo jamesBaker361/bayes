@@ -132,7 +132,7 @@ def main(args):
 
             running_loss += loss.item()
 
-        print(f"Dual Training Epoch [{epoch+1}/{args.training_stage_0_epochs}], Loss: {running_loss/len(train_loader):.4f}")
+        print(f"Dual Training Epoch [{epoch+1}/{args.training_stage_1_epochs}], Loss: {running_loss/len(train_loader):.4f}")
 
     test()
 
