@@ -23,6 +23,16 @@ def get_model_size(model):
     total_size = (param_size + buffer_size) / (1024 ** 2)  # Convert to MB
     return total_size
 
+def get_weights_stats(model):
+    stats = {}
+    for name, param in model.named_parameters():
+        if param.requires_grad:  # Only consider trainable parameters
+            stats[name] = {
+                "mean": param.data.mean().item(),
+                "std": param.data.std().item()
+            }
+    return stats
+
 transform=transforms.Compose([
              transforms.ToTensor(),
              transforms.Normalize((0.5,), (0.5,)) , # Normalize to [-1, 1]
