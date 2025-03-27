@@ -93,6 +93,10 @@ def main(args):
         nn.LeakyReLU(),
         nn.Linear(8,args.forward_embedding_size)
     )
+
+    stats=get_weights_stats(model)
+
+    
     
     optimizer = optim.Adam([p for p in model.parameters()]+[p for p in forward_model.parameters()], lr=1e-4)
 
