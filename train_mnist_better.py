@@ -15,6 +15,7 @@ parser.add_argument("--training_stage_0_epochs",type=int,default=5)
 parser.add_argument("--training_stage_1_epochs",type=int,default=5)
 parser.add_argument("--forward_embedding_size",type=int,default=8)
 parser.add_argument("--limit_per_epoch",type=int,default=100000)
+parser.add_argument("--batch_size",type=int,default=64)
 
 def get_model_size(model):
     param_size = sum(p.numel() * p.element_size() for p in model.parameters())  # Parameters size
@@ -32,8 +33,8 @@ def main(args):
     train_dataset = datasets.MNIST(root='./data', train=True, transform=transform, download=True)
     test_dataset = datasets.MNIST(root='./data', train=False, transform=transform, download=True)
 
-    train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
 
     model=NoiseLinear(args.forward_embedding_size,device)
     
@@ -89,7 +90,7 @@ def main(args):
         for b, (images, labels) in enumerate(train_loader):
             images, labels = images.to(device), labels.to(device)
 
-            image_scale=[random() for r in range(64)]
+            image_scale=[random() for r in range(args.batch_size)]
             noise_scale=[1-r for r in image_scale]
             noise=torch.randn(images.size()).to(device)
             images=images*image_scale[:,None]  +noise*noise_scale[:,None]
