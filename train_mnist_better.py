@@ -57,6 +57,7 @@ def main(args):
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
 
     for epoch in range(args.training_stage_0_epochs):
+        train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,drop_last=True)
         model.train()
         running_loss = 0.0
         for b, (images, labels) in enumerate(train_loader):
@@ -106,6 +107,7 @@ def main(args):
     optimizer = optim.Adam([p for p in model.parameters()]+[p for p in forward_model.parameters()], lr=1e-4)
 
     for epoch in range(args.training_stage_1_epochs):
+        train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,drop_last=True)
         running_loss=0.0
         for b, (images, labels) in enumerate(train_loader):
             images, labels = images.to(device), labels.to(device)
