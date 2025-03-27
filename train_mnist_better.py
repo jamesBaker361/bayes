@@ -134,6 +134,7 @@ def main(args):
 
         print(f"Epoch [{epoch+1}/{args.training_stage_0_epochs}], Loss: {running_loss/len(train_loader):.4f}")
 
+    test()
 
 
             
