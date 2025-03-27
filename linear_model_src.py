@@ -23,18 +23,18 @@ class NoiseLinear(nn.Module):
 
         self.to(device)  # Move entire module to device
 
-    def forward(self, inputs: torch.Tensor, noise_list: list[torch.Tensor] = None) -> torch.Tensor:
+    def forward(self, inputs: torch.Tensor, layer_noise: list[torch.Tensor] = None) -> torch.Tensor:
         inputs = inputs.to(self.device)  # Move inputs to device
 
-        if noise_list is None:
+        if layer_noise is None:
             batch_size = inputs.size(0)
-            noise_list = [torch.zeros((batch_size, self.forward_embedding_size), device=self.device) 
+            layer_noise = [torch.zeros((batch_size, self.forward_embedding_size), device=self.device) 
                           for _ in range(len(self.layer_list))]
 
         noise_index = 0
         for layer in self.layer_list:
             if isinstance(layer, nn.Linear):
-                noise = noise_list[noise_index].to(self.device)
+                noise = layer_noise[noise_index].to(self.device)
                 inputs = torch.cat([inputs, noise], dim=1)
                 inputs = layer(inputs)
                 noise_index += 1
