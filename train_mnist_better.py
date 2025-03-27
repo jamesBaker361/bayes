@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader
 from torchvision.models.vision_transformer import vit_b_16
 import argparse
 from linear_model_src import NoiseLinear
+import random
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 parser = argparse.ArgumentParser(description="A simple argparse example")
@@ -82,13 +83,16 @@ def main(args):
         nn.Linear(8,args.forward_embedding_size)
     )
     
-    optimizer = optim.Adam([model.parameters()]+[forward_model.parameters()], lr=1e-4)
+    optimizer = optim.Adam([p for p in model.parameters()]+[p for p in forward_model.parameters()], lr=1e-4)
 
     for epoch in range(args.training_stage_1_epochs):
         for b, (images, labels) in enumerate(train_loader):
             images, labels = images.to(device), labels.to(device)
 
-            
+            image_scale=[random() for r in range(64)]
+            noise_scale=[1-r for r in image_scale]
+            noise=torch.randn(images.size()).to(device)
+            images=images*image_scale[:,None]  +noise*noise_scale[:,None]
 
 
 if __name__=="__main__":
