@@ -50,7 +50,8 @@ def main(args):
 
     stats=get_weights_stats(model)
 
-    weight_list=[[weight["mean"],weight["std"]] for key,weight in stats.items() if key.get("weight")!=-1 ]
+    weight_list=[[weight["mean"],weight["std"]] for key,weight in stats.items() if key.find("weight")!=-1 ]
+    print(weight_list)
     
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
@@ -98,11 +99,14 @@ def main(args):
         nn.Linear(8,args.forward_embedding_size)
     )
 
+    forward_model.to(device)
+
     
     
     optimizer = optim.Adam([p for p in model.parameters()]+[p for p in forward_model.parameters()], lr=1e-4)
 
     for epoch in range(args.training_stage_1_epochs):
+        running_loss=0.0
         for b, (images, labels) in enumerate(train_loader):
             images, labels = images.to(device), labels.to(device)
 
@@ -110,6 +114,31 @@ def main(args):
             noise_scale = 1 - image_scale  # Complementary scaling
             noise=torch.randn(images.size()).to(device)
             images = images * image_scale.view(-1, 1) + noise * noise_scale.view(-1, 1)
+
+            layer_noise=[]
+            for prior in weight_list:
+                prior_tensor=torch.tensor([prior for _ in range(args.batch_size)])
+                embedding_input=torch.cat([prior_tensor,noise_scale.view(args.batch_size,1)],dim=1)
+                embedding_input.to(device)
+                layer_noise.append(forward_model(embedding_input))
+
+            outputs=model(images,layer_noise)
+            loss = criterion(outputs, labels)
+
+            # Backward pass
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            running_loss += loss.item()
+
+        print(f"Epoch [{epoch+1}/{args.training_stage_0_epochs}], Loss: {running_loss/len(train_loader):.4f}")
+
+
+
+            
+
+
 
 
 
