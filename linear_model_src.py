@@ -22,18 +22,28 @@ class NoiseLinear(nn.Module):
 
         self.device=device
         
-    def forward(self,inputs:torch.Tensor,noise:torch.Tensor=None)->torch.Tensor:
+    def forward(self,inputs:torch.Tensor,noise_list:list[torch.Tensor]=None)->torch.Tensor:
         inputs.to(self.device)
-        if noise==None:
+        if noise_list==None:
             batch_size=inputs.size()[0]
-            noise=torch.zeros((batch_size,self.forward_embedding_size))
+            noise_list=[torch.zeros((batch_size,self.forward_embedding_size)) for layer in self.layer_list]
             
-        noise.to(self.device)
+        noise_index=0
         for layer in self.layer_list:
             if type(layer)==nn.Linear:
+                noise=noise_list[noise_index]
+                noise.to(self.device)
                 inputs=torch.cat([inputs,noise],dim=1)
                 inputs=layer(inputs)
+                noise_index+=1
             else:
                 inputs=layer(inputs)
         
         return inputs
+    
+    def parameters(self):
+        p=[]
+        for layer in self.layer_list():
+            if type(layer)==nn.Linear:
+                p+=[param for param in layer.parameters()]
+        return p
