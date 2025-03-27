@@ -47,6 +47,10 @@ def main(args):
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False,drop_last=True)
 
     model=NoiseLinear(args.forward_embedding_size,device)
+
+    stats=get_weights_stats(model)
+
+    weight_list=[[weight["mean"],weight["std"]] for key,weight in stats.items() if key.get("weight")!=-1 ]
     
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
@@ -94,8 +98,6 @@ def main(args):
         nn.Linear(8,args.forward_embedding_size)
     )
 
-    stats=get_weights_stats(model)
-
     
     
     optimizer = optim.Adam([p for p in model.parameters()]+[p for p in forward_model.parameters()], lr=1e-4)
@@ -108,6 +110,8 @@ def main(args):
             noise_scale = 1 - image_scale  # Complementary scaling
             noise=torch.randn(images.size()).to(device)
             images = images * image_scale.view(-1, 1) + noise * noise_scale.view(-1, 1)
+
+
 
 
 if __name__=="__main__":
