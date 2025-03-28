@@ -50,12 +50,12 @@ fig, axes = plt.subplots(nrows=num_rows, ncols=num_cols, figsize=(4 * num_cols, 
 axes = axes.flatten()
 
 # Plot data
-for ax, ((limit, flag), values) in zip(axes, data.items()):
+for ax, ((limit, flag), values) in zip(axes, sorted(data.items(), key=lambda x:x[0][0])):
     sorted_train_0 = sorted(values.keys())  # Sort x-axis values
     y_values = [sum(values[t]) / len(values[t]) for t in sorted_train_0]  # Compute average if multiple values
 
-    ax.plot(sorted_train_0, y_values, marker='o', linestyle='-', label=f"Samples Per Epoch {limit}, Priors= {flag}")
-    ax.set_title(f"Limit {limit}, Flag {flag}")
+    ax.plot(sorted_train_0, y_values, marker='o', linestyle='-', label=f"Limit {limit}, Flag {flag}")
+    ax.set_title(f"Batches {limit}, Use Prior = {flag}")
     ax.set_xlabel("Normal Training Epochs")
     ax.set_ylabel("Accuracy")
     ax.legend()
