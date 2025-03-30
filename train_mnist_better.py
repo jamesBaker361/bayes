@@ -112,6 +112,8 @@ def main(args):
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,drop_last=True)
         running_loss=0.0
         for b, (images, labels) in enumerate(train_loader):
+            if b>=args.limit_per_epoch:
+                break
             images, labels = images.to(device), labels.to(device)
 
             image_scale = torch.rand(args.batch_size, device=device)  # Shape: [batch_size]
