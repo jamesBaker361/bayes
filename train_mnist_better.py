@@ -49,10 +49,7 @@ def main(args):
 
     model=NoiseLinear(args.forward_embedding_size,device)
 
-    stats=get_weights_stats(model)
-
-    weight_list=[[weight["mean"],weight["std"]] for key,weight in stats.items() if key.find("weight")!=-1 ]
-    print(weight_list)
+    
     
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
@@ -104,7 +101,10 @@ def main(args):
 
     forward_model.to(device)
 
-    
+    stats=get_weights_stats(model)
+
+    weight_list=[[weight["mean"],weight["std"]] for key,weight in stats.items() if key.find("weight")!=-1 ]
+    print(weight_list)
     
     optimizer = optim.Adam([p for p in model.parameters()]+[p for p in forward_model.parameters()], lr=1e-4)
 
