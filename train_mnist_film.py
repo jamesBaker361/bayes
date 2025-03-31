@@ -103,8 +103,8 @@ def main(args):
 
     stats=get_weights_stats(model)
 
-    weight_list=[[weight["mean"],weight["std"]] for key,weight in stats.items() if key.find("weight")!=-1 ]
-    print(weight_list)
+    prior_list=[[weight["mean"],weight["std"]] for key,weight in stats.items() if key.find("weight")!=-1 ]
+    print(prior_list)
     
     #optimizer = optim.Adam([p for p in model.parameters()]+[p for p in forward_model.parameters()], lr=1e-4)
 
@@ -122,7 +122,7 @@ def main(args):
             images = images * image_scale.view(-1, 1) + noise * noise_scale.view(-1, 1)
 
             layer_noise=[]
-            for prior in weight_list:
+            for prior in prior_list:
                 if args.no_prior:
                     prior_tensor=torch.zeros((args.batch_size,2))
                 prior_tensor=torch.tensor([prior for _ in range(args.batch_size)])
