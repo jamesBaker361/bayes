@@ -65,12 +65,15 @@ class CustomConvWithExtra(nn.Module):
         out_channels = len(self.extra_convs)
         batch_size, _, H, W = x.shape
         if extra_inputs==None:
-            extra_inputs=torch.zeros((batch_size,self.extra_channels_per_output*out_channels,H,W))
+            extra_inputs=torch.zeros((batch_size,self.extra_channels_per_output*out_channels))
         
         # Split the extra inputs into groups of `extra_channels_per_output` for each output channel
         extra_outs = []
+        #print('x.size()',x.size())
+        #print("extra_inputs.size()",extra_inputs.size())
         for i in range(out_channels):
-            extra_inp = extra_inputs[:, i*self.extra_channels_per_output : (i+1)*self.extra_channels_per_output, :, :]
+            extra_inp = extra_inputs[:, i*self.extra_channels_per_output : (i+1)*self.extra_channels_per_output]
+            extra_inp=extra_inp.view(batch_size,self.extra_channels_per_output, 1,1).expand(batch_size,self.extra_channels_per_output,H,W)
             #print(extra_inp.shape)
             extra_out = self.extra_convs[i](extra_inp)  # Process extra inputs
             #print(extra_out.shape)
@@ -90,7 +93,7 @@ class NoiseConv(nn.Module):
                     nn.ReLU(inplace=True),
                     CustomConvWithExtra(16,32,kernel_size=4,extra_channels_per_output=3,bias=False),
                     nn.Flatten(),
-                    nn.Linear(32*64,10)])
+                    nn.Linear(1152,10)])
         
         self.to(device)
 
@@ -107,4 +110,57 @@ class NoiseConv(nn.Module):
                 noise_index+=1
             else:
                 inputs=layer(inputs)
+        return inputs
+    
+
+class FiLMConditioning(nn.Module):
+    def __init__(self, d_conditioning,d_outputs):
+        super().__init__()
+        self.scale = nn.Linear(d_conditioning,d_outputs)
+        self.shift = nn.Linear(d_conditioning,d_outputs)
+
+    def forward(self, inputs, cond_vector):
+        if cond_vector is None:
+            return inputs
+        gamma = self.scale(cond_vector).unsqueeze(1)  # Scaling factor
+        beta = self.shift(cond_vector).unsqueeze(1)   # Shift factor
+        return gamma * inputs + beta  # Apply FiLM conditioning
+
+class NoiseLinearFILM(nn.Module):
+    def __init__(self,forward_embedding_size,device, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.forward_embedding_size = forward_embedding_size
+        self.device = device
+
+        # Use nn.ModuleList to properly register submodules
+        self.layer_list = nn.ModuleList([
+            nn.Linear(28 * 28 , 128),
+            nn.LeakyReLU(),
+            FiLMConditioning(forward_embedding_size,128),
+            nn.Linear(128 , 64),
+            nn.LeakyReLU(),
+            FiLMConditioning(forward_embedding_size,64),
+            nn.Linear(64, 10)
+        ])
+
+        self.film_conditioning_list=nn.ModuleList([
+
+        ])
+
+        self.to(device)
+
+    def forward(self, inputs: torch.Tensor, layer_noise: list[torch.Tensor] = None) -> torch.Tensor:
+        inputs = inputs.to(self.device)  # Move inputs to device
+
+        if layer_noise is None:
+            layer_noise = [None for _ in range(len(self.layer_list))]
+
+        noise_index = 0
+        for layer in self.layer_list:
+            if isinstance(layer,FiLMConditioning):
+                noise = layer_noise[noise_index]
+                inputs=layer(inputs,noise)
+            else:
+                inputs = layer(inputs)
+
         return inputs
