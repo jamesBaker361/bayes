@@ -122,8 +122,8 @@ class FiLMConditioning(nn.Module):
     def forward(self, inputs, cond_vector):
         if cond_vector is None:
             return inputs
-        gamma = self.scale(cond_vector).unsqueeze(1)  # Scaling factor
-        beta = self.shift(cond_vector).unsqueeze(1)   # Shift factor
+        gamma = self.scale(cond_vector)  # Scaling factor
+        beta = self.shift(cond_vector)   # Shift factor
         return gamma * inputs + beta  # Apply FiLM conditioning
 
 class NoiseLinearFILM(nn.Module):
@@ -132,16 +132,28 @@ class NoiseLinearFILM(nn.Module):
         self.embedding_size = embedding_size
         self.device = device
 
-        # Use nn.ModuleList to properly register submodules
-        self.layer_list = nn.ModuleList([
-            nn.Linear(28 * 28 , 128),
-            nn.LeakyReLU(),
-            FiLMConditioning(embedding_size,128),
-            nn.Linear(128 , 64),
-            nn.LeakyReLU(),
-            FiLMConditioning(embedding_size,64),
-            nn.Linear(64, 10)
-        ])
+        if embedding_size!=None:
+            # Use nn.ModuleList to properly register submodules
+            self.layer_list = nn.ModuleList([
+                nn.Linear(28 * 28 , 128),
+                nn.LeakyReLU(),
+                FiLMConditioning(embedding_size,128),
+                nn.Linear(128 , 64),
+                nn.LeakyReLU(),
+                FiLMConditioning(embedding_size,64),
+                nn.Linear(64, 10)
+            ])
+        else:
+            #if none then its 1 for noise level + average activations
+            self.layer_list = nn.ModuleList([
+                nn.Linear(28 * 28 , 128),
+                nn.LeakyReLU(),
+                FiLMConditioning(129,128),
+                nn.Linear(128 , 64),
+                nn.LeakyReLU(),
+                FiLMConditioning(65,64),
+                nn.Linear(64, 10)
+            ])
 
         self.to(device)
 
