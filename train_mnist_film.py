@@ -13,7 +13,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 parser = argparse.ArgumentParser(description="A simple argparse example")
 parser.add_argument("--training_stage_0_epochs",type=int,default=5)
 parser.add_argument("--training_stage_1_epochs",type=int,default=5)
-parser.add_argument("--forward_embedding_size",type=int,default=8)
+#parser.add_argument("--forward_embedding_size",type=int,default=8)
 parser.add_argument("--limit_per_epoch",type=int,default=100000)
 parser.add_argument("--batch_size",type=int,default=64)
 parser.add_argument("--no_prior",action="store_true")
@@ -47,7 +47,8 @@ def main(args):
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,drop_last=True)
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False,drop_last=True)
 
-    model=NoiseLinearFILM(args.forward_embedding_size,device)
+    embedding_size=3
+    model=NoiseLinearFILM(embedding_size,device)
 
     
     
