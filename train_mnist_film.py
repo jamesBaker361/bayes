@@ -42,9 +42,16 @@ transform=transforms.Compose([
 
 def main(args):
     train_dataset = datasets.MNIST(root='./data', train=True, transform=transform, download=True)
+
+    # Define sizes for the split
+    lengths = [len(train_dataset) // 2, len(train_dataset) - len(train_dataset) // 2]
+
+    # Split dataset
+    train_subset1, train_subset2 = torch.utils.data.random_split(train_dataset, lengths)
     test_dataset = datasets.MNIST(root='./data', train=False, transform=transform, download=True)
 
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,drop_last=True)
+    train_loader_1 = DataLoader(train_subset1, batch_size=args.batch_size, shuffle=True,drop_last=True)
+    train_loader_2=DataLoader(train_subset2, batch_size=args.batch_size, shuffle=True,drop_last=True)
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False,drop_last=True)
 
     embedding_size=3
@@ -56,10 +63,10 @@ def main(args):
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
 
     for epoch in range(args.training_stage_0_epochs):
-        train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,drop_last=True)
+        train_loader_1 = DataLoader(train_subset1, batch_size=args.batch_size, shuffle=True,drop_last=True)
         model.train()
         running_loss = 0.0
-        for b, (images, labels) in enumerate(train_loader):
+        for b, (images, labels) in enumerate(train_loader_1):
             if b>=args.limit_per_epoch:
                 break
             images, labels = images.to(device), labels.to(device)
@@ -76,7 +83,7 @@ def main(args):
 
             running_loss += loss.item()
 
-        print(f"Epoch [{epoch+1}/{args.training_stage_0_epochs}], Loss: {running_loss/len(train_loader):.4f}")
+        print(f"Epoch [{epoch+1}/{args.training_stage_0_epochs}], Loss: {running_loss/len(train_loader_1):.4f}")
     
     def test():
         model.eval()
@@ -102,9 +109,9 @@ def main(args):
     #optimizer = optim.Adam([p for p in model.parameters()]+[p for p in forward_model.parameters()], lr=1e-4)
 
     for epoch in range(args.training_stage_1_epochs):
-        train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,drop_last=True)
+        train_loader_2=DataLoader(train_subset2, batch_size=args.batch_size, shuffle=True,drop_last=True)
         running_loss=0.0
-        for b, (images, labels) in enumerate(train_loader):
+        for b, (images, labels) in enumerate(train_loader_2):
             if b>=args.limit_per_epoch:
                 break
             images, labels = images.to(device), labels.to(device)
@@ -124,6 +131,8 @@ def main(args):
                 layer_noise.append(embedding_input)
 
             outputs=model(images,layer_noise)
+            #print(outputs.size())
+            #print(labels)
             loss = criterion(outputs, labels)
 
             # Backward pass
@@ -133,7 +142,7 @@ def main(args):
 
             running_loss += loss.item()
 
-        print(f"Dual Training Epoch [{epoch+1}/{args.training_stage_1_epochs}], Loss: {running_loss/len(train_loader):.4f}")
+        print(f"Dual Training Epoch [{epoch+1}/{args.training_stage_1_epochs}], Loss: {running_loss/len(train_loader_2):.4f}")
 
     test()
 
