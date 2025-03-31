@@ -143,10 +143,6 @@ class NoiseLinearFILM(nn.Module):
             nn.Linear(64, 10)
         ])
 
-        self.film_conditioning_list=nn.ModuleList([
-
-        ])
-
         self.to(device)
 
     def forward(self, inputs: torch.Tensor, layer_noise: list[torch.Tensor] = None) -> torch.Tensor:
