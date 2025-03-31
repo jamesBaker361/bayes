@@ -156,6 +156,7 @@ class NoiseLinearFILM(nn.Module):
             if isinstance(layer,FiLMConditioning):
                 noise = layer_noise[noise_index]
                 inputs=layer(inputs,noise)
+                noise_index+=1
             else:
                 inputs = layer(inputs)
 
