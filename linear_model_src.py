@@ -127,19 +127,19 @@ class FiLMConditioning(nn.Module):
         return gamma * inputs + beta  # Apply FiLM conditioning
 
 class NoiseLinearFILM(nn.Module):
-    def __init__(self,forward_embedding_size,device, *args, **kwargs):
+    def __init__(self,embedding_size,device, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.forward_embedding_size = forward_embedding_size
+        self.embedding_size = embedding_size
         self.device = device
 
         # Use nn.ModuleList to properly register submodules
         self.layer_list = nn.ModuleList([
             nn.Linear(28 * 28 , 128),
             nn.LeakyReLU(),
-            FiLMConditioning(forward_embedding_size,128),
+            FiLMConditioning(embedding_size,128),
             nn.Linear(128 , 64),
             nn.LeakyReLU(),
-            FiLMConditioning(forward_embedding_size,64),
+            FiLMConditioning(embedding_size,64),
             nn.Linear(64, 10)
         ])
 
