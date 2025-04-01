@@ -87,7 +87,7 @@ def main(args):
 
         print(f"Epoch [{epoch+1}/{args.training_stage_0_epochs}], Loss: {running_loss/len(train_loader_1):.4f}")
     
-    def test():
+    def test(prior_list=None):
         model.eval()
         correct, total = 0, 0
         with torch.no_grad():
@@ -97,7 +97,19 @@ def main(args):
                 noise_scale = 1 - image_scale  # Complementary scaling
                 noise=torch.randn(images.size()).to(device)
                 images = images * image_scale.view(-1, 1) + noise * noise_scale.view(-1, 1)
-                outputs = model(images)
+                layer_noise=None
+                if prior_list!=None:
+                    layer_noise=[]
+                    for prior in prior_list:
+                        if args.no_prior:
+                            prior_tensor=torch.zeros((args.batch_size,2))
+                        print("prior[0].size()",prior[0].size())
+                        print('noise_scale.view(args.batch_size,1).size()',noise_scale.view(args.batch_size,1).size())
+                        prior_tensor=torch.tensor([prior for _ in range(args.batch_size)])
+                        embedding_input=torch.cat([prior_tensor,noise_scale.view(args.batch_size,1)],dim=1)
+                        embedding_input.to(device)
+                        layer_noise.append(embedding_input)
+                outputs = model(images,layer_noise)
                 _, predicted = torch.max(outputs, 1)
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
@@ -162,6 +174,8 @@ def main(args):
             for prior in prior_list:
                 if args.no_prior:
                     prior_tensor=torch.zeros((args.batch_size,2))
+                print("prior[0].size()",prior[0].size())
+                print('noise_scale.view(args.batch_size,1).size()',noise_scale.view(args.batch_size,1).size())
                 prior_tensor=torch.tensor([prior for _ in range(args.batch_size)])
                 embedding_input=torch.cat([prior_tensor,noise_scale.view(args.batch_size,1)],dim=1)
                 embedding_input.to(device)
