@@ -89,7 +89,7 @@ def main(args):
                 image_scale = torch.rand(args.batch_size, device=device)  # Shape: [batch_size]
                 noise_scale = 1 - image_scale  # Complementary scaling
                 noise=torch.randn(images.size()).to(device)
-                images = images * image_scale.view(-1, 1) + noise * noise_scale.view(-1, 1)
+                images = images * image_scale.view(-1, 1,1,1) + noise * noise_scale.view(-1, 1,1,1)
                 outputs = model(images)
                 _, predicted = torch.max(outputs, 1)
                 total += labels.size(0)
