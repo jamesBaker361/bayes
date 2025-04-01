@@ -77,7 +77,7 @@ def main(args):
 
         print(f"Epoch [{epoch+1}/{args.training_stage_0_epochs}], Loss: {running_loss/len(train_loader):.4f}")
     
-    def test():
+    def test(weight_list=None):
         model.eval()
         correct, total = 0, 0
         with torch.no_grad():
@@ -87,7 +87,17 @@ def main(args):
                 noise_scale = 1 - image_scale  # Complementary scaling
                 noise=torch.randn(images.size()).to(device)
                 images = images * image_scale.view(-1, 1) + noise * noise_scale.view(-1, 1)
-                outputs = model(images)
+                layer_noise=None
+                if weight_list is not None:
+                    layer_noise=[]
+                    for prior in weight_list:
+                        if args.no_prior:
+                            prior_tensor=torch.zeros((args.batch_size,2))
+                        prior_tensor=torch.tensor([prior for _ in range(args.batch_size)])
+                        embedding_input=torch.cat([prior_tensor,noise_scale.view(args.batch_size,1)],dim=1)
+                        embedding_input.to(device)
+                        layer_noise.append(forward_model(embedding_input))
+                outputs = model(images,layer_noise)
                 _, predicted = torch.max(outputs, 1)
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
@@ -146,7 +156,7 @@ def main(args):
 
         print(f"Dual Training Epoch [{epoch+1}/{args.training_stage_1_epochs}], Loss: {running_loss/len(train_loader):.4f}")
 
-    test()
+    test(weight_list=weight_list)
 
 if __name__=="__main__":
     args=parser.parse_args()

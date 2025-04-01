@@ -80,7 +80,7 @@ def main(args):
 
         print(f"Epoch [{epoch+1}/{args.training_stage_0_epochs}], Loss: {running_loss/len(train_loader):.4f}")
     
-    def test():
+    def test(weight_list=None):
         model.eval()
         correct, total = 0, 0
         with torch.no_grad():
@@ -90,7 +90,23 @@ def main(args):
                 noise_scale = 1 - image_scale  # Complementary scaling
                 noise=torch.randn(images.size()).to(device)
                 images = images * image_scale.view(-1, 1,1,1) + noise * noise_scale.view(-1, 1,1,1)
-                outputs = model(images)
+                layer_noise=None
+                if weight_list!=None:
+                    layer_noise=[]
+                    for key,value in weight_list.items():
+                        layer_noise_embedding=[]
+                        for prior in value:
+                            prior_tensor=torch.tensor([prior for _ in range(args.batch_size)])
+                            embedding_input=torch.cat([prior_tensor,noise_scale.view(args.batch_size,1)],dim=1)
+                            #print("embedding_input.size()",embedding_input.size())
+                            embedding_input.to(device)
+                            noise=forward_model(embedding_input)
+                            #print('noise.size()',noise.size())
+                            layer_noise_embedding.append(forward_model(embedding_input))
+                        all_embeddings=torch.cat(layer_noise_embedding,dim=1)
+                        #print('all_embeddings.size()',all_embeddings.size())
+                        layer_noise.append(all_embeddings)
+                outputs = model(images,layer_noise)
                 _, predicted = torch.max(outputs, 1)
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
