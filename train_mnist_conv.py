@@ -20,6 +20,7 @@ parser.add_argument("--limit_per_epoch",type=int,default=100000)
 parser.add_argument("--batch_size",type=int,default=64)
 parser.add_argument("--no_prior",action="store_true")
 parser.add_argument("--output_path",type=str,default="graph.png")
+parser.add_argument("--use_fixed_image_scale_schedule",action="store_true")
 
 def get_model_size(model):
     param_size = sum(p.numel() * p.element_size() for p in model.parameters())  # Parameters size
@@ -60,16 +61,19 @@ def main(args):
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
 
-    def test(weight_list=None):
+    def test(weight_list=None,fixed_image_scale=None):
         model.eval()
         correct, total = 0, 0
         with torch.no_grad():
             for images, labels in test_loader:
                 images, labels = images.to(device), labels.to(device)
-                image_scale = torch.rand(args.batch_size, device=device)  # Shape: [batch_size]
-                noise_scale = 1 - image_scale  # Complementary scaling
+                if fixed_image_scale==None:
+                    image_weight = torch.rand(args.batch_size, device=device)  # Shape: [batch_size]
+                else:
+                    image_weight = torch.Tensor([fixed_image_scale for _ in range(args.batch_size)])
+                noise_weight = 1 - image_weight  # Complementary scaling
                 noise=torch.randn(images.size()).to(device)
-                images = images * image_scale.view(-1, 1,1,1) + noise * noise_scale.view(-1, 1,1,1)
+                images = images * image_weight.view(-1, 1,1,1) + noise * noise_weight.view(-1, 1,1,1)
                 layer_noise=None
                 if weight_list!=None:
                     layer_noise=[]
@@ -77,7 +81,7 @@ def main(args):
                         layer_noise_embedding=[]
                         for prior in value:
                             prior_tensor=torch.tensor([prior for _ in range(args.batch_size)])
-                            embedding_input=torch.cat([prior_tensor,noise_scale.view(args.batch_size,1)],dim=1)
+                            embedding_input=torch.cat([prior_tensor,noise_weight.view(args.batch_size,1)],dim=1)
                             #print("embedding_input.size()",embedding_input.size())
                             embedding_input.to(device)
                             noise=forward_model(embedding_input)
@@ -94,6 +98,7 @@ def main(args):
         print(f"Test Accuracy: {100 * correct / total:.2f}%")
         print(f"{100 * correct / total:.2f}")
 
+    
     for epoch in range(args.training_stage_0_epochs):
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,drop_last=True)
         model.train()
@@ -138,6 +143,10 @@ def main(args):
     loss_list=[]
     baseline_loss_list=[]
 
+    fixed_image_scale_list=[]
+    if args.use_fixed_image_scale_schedule:
+        fixed_image_scale_list=[float(k)/args.training_stage_1_epochs for k in range(args.training_stage_1_epochs)][::-1]
+
     for epoch in range(args.training_stage_1_epochs):
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,drop_last=True)
         running_loss=0.0
@@ -147,17 +156,21 @@ def main(args):
                 break
             images, labels = images.to(device), labels.to(device)
 
-            image_scale = torch.rand(args.batch_size, device=device)  # Shape: [batch_size]
-            noise_scale = 1 - image_scale  # Complementary scaling
+            if args.use_fixed_image_scale_schedule:
+                fixed_image_scale=fixed_image_scale_list[epoch]
+                image_weight=torch.Tensor([fixed_image_scale for _ in range(args.batch_size)])
+            else:
+                image_weight = torch.rand(args.batch_size, device=device)  # Shape: [batch_size]
+            noise_weight = 1 - image_weight  # Complementary scaling
             noise=torch.randn(images.size()).to(device)
-            images = images * image_scale.view(-1, 1,1,1) + noise * noise_scale.view(-1, 1,1,1)
+            images = images * image_weight.view(-1, 1,1,1) + noise * noise_weight.view(-1, 1,1,1)
 
             layer_noise=[]
             for key,value in weight_list.items():
                 layer_noise_embedding=[]
                 for prior in value:
                     prior_tensor=torch.tensor([prior for _ in range(args.batch_size)])
-                    embedding_input=torch.cat([prior_tensor,noise_scale.view(args.batch_size,1)],dim=1)
+                    embedding_input=torch.cat([prior_tensor,noise_weight.view(args.batch_size,1)],dim=1)
                     #print("embedding_input.size()",embedding_input.size())
                     embedding_input.to(device)
                     noise=forward_model(embedding_input)
@@ -182,10 +195,14 @@ def main(args):
                 break
             images, labels = images.to(device), labels.to(device)
 
-            image_scale = torch.rand(args.batch_size, device=device)  # Shape: [batch_size]
-            noise_scale = 1 - image_scale  # Complementary scaling
+            if args.use_fixed_image_scale_schedule:
+                fixed_image_scale=fixed_image_scale_list[epoch]
+                image_weight=torch.Tensor([fixed_image_scale for _ in range(args.batch_size)])
+            else:
+                image_weight = torch.rand(args.batch_size, device=device)  # Shape: [batch_size]
+            noise_weight = 1 - image_weight  # Complementary scaling
             noise=torch.randn(images.size()).to(device)
-            images = images * image_scale.view(-1, 1,1,1) + noise * noise_scale.view(-1, 1,1,1)
+            images = images * image_weight.view(-1, 1,1,1) + noise * noise_weight.view(-1, 1,1,1)
 
             outputs=baseline_model(images)
             loss = criterion(outputs, labels)
