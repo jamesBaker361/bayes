@@ -9,6 +9,7 @@ import argparse
 from linear_model_src import NoiseConv
 from random import random
 import copy
+import matplotlib.pyplot as plt
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 parser = argparse.ArgumentParser(description="A simple argparse example")
@@ -18,6 +19,7 @@ parser.add_argument("--forward_embedding_size",type=int,default=8)
 parser.add_argument("--limit_per_epoch",type=int,default=100000)
 parser.add_argument("--batch_size",type=int,default=64)
 parser.add_argument("--no_prior",action="store_true")
+parser.add_argument("--output_path",type=str,default="graph.png")
 
 def get_model_size(model):
     param_size = sum(p.numel() * p.element_size() for p in model.parameters())  # Parameters size
@@ -133,6 +135,9 @@ def main(args):
     
     optimizer = optim.Adam([p for p in model.parameters()]+[p for p in forward_model.parameters()], lr=1e-4)
 
+    loss_list=[]
+    baseline_loss_list=[]
+
     for epoch in range(args.training_stage_1_epochs):
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,drop_last=True)
         running_loss=0.0
@@ -190,11 +195,26 @@ def main(args):
             loss.backward()
             baseline_optimizer.step()
 
-            running_loss += loss.item()
+            running_loss_baseline += loss.item()
 
-        print(f"Dual Training Epoch [{epoch+1}/{args.training_stage_1_epochs}], Loss: {running_loss/len(train_loader):.4f}")
-
+        print(f"Dual Training Epoch [{epoch+1}/{args.training_stage_1_epochs}], Loss: {running_loss/len(train_loader):.4f} Baseline Loss: {running_loss_baseline/len(train_loader):.4f}")
+        loss_list.append(running_loss)
+        baseline_loss_list.append(running_loss_baseline)
     test(weight_list)
+
+    x=[i for i in range(args.traing_stage_1_epochs)]
+    plt.figure(figsize=(8,5))
+    plt.plot(x, running_loss, label='With Noise + Prior Conditioning', linestyle='-', marker='o')
+    plt.plot(x, running_loss_baseline, label='Baseline', linestyle='--', marker='s')
+
+    # Labels and title
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy')
+    plt.legend()
+    plt.grid(True)
+
+    # **Save the figure instead of showing it**
+    plt.savefig(args.output_path, dpi=300, bbox_inches='tight')
 
 if __name__=="__main__":
     args=parser.parse_args()
