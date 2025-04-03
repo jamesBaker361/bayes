@@ -128,6 +128,7 @@ def main(args):
     forward_model.to(device)
 
     baseline_model=copy.deepcopy(model)
+    baseline_optimizer=optim.Adam(baseline_model.parameters(),lr=1e-4)
     
     
     optimizer = optim.Adam([p for p in model.parameters()]+[p for p in forward_model.parameters()], lr=1e-4)
@@ -185,9 +186,9 @@ def main(args):
             loss = criterion(outputs, labels)
 
             # Backward pass
-            optimizer.zero_grad()
+            baseline_optimizer.zero_grad()
             loss.backward()
-            optimizer.step()
+            baseline_optimizer.step()
 
             running_loss += loss.item()
 
