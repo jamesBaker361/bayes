@@ -8,6 +8,7 @@ from torchvision.models.vision_transformer import vit_b_16
 import argparse
 from linear_model_src import NoiseConv
 from random import random
+import copy
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 parser = argparse.ArgumentParser(description="A simple argparse example")
@@ -57,29 +58,6 @@ def main(args):
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
 
-    for epoch in range(args.training_stage_0_epochs):
-        train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,drop_last=True)
-        model.train()
-        running_loss = 0.0
-        for b, (images, labels) in enumerate(train_loader):
-            if b>=args.limit_per_epoch:
-                break
-            images, labels = images.to(device), labels.to(device)
-
-            
-            # Forward pass
-            outputs = model(images)
-            loss = criterion(outputs, labels)
-
-            # Backward pass
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-
-            running_loss += loss.item()
-
-        print(f"Epoch [{epoch+1}/{args.training_stage_0_epochs}], Loss: {running_loss/len(train_loader):.4f}")
-    
     def test(weight_list=None):
         model.eval()
         correct, total = 0, 0
@@ -114,6 +92,31 @@ def main(args):
         print(f"Test Accuracy: {100 * correct / total:.2f}%")
         print(f"{100 * correct / total:.2f}")
 
+    for epoch in range(args.training_stage_0_epochs):
+        train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,drop_last=True)
+        model.train()
+        running_loss = 0.0
+        for b, (images, labels) in enumerate(train_loader):
+            if b>=args.limit_per_epoch:
+                break
+            images, labels = images.to(device), labels.to(device)
+
+            
+            # Forward pass
+            outputs = model(images)
+            loss = criterion(outputs, labels)
+
+            # Backward pass
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            running_loss += loss.item()
+
+        print(f"Epoch [{epoch+1}/{args.training_stage_0_epochs}], Loss: {running_loss/len(train_loader):.4f}")
+    
+    
+
     test()
 
     forward_model=nn.Sequential(
@@ -124,6 +127,7 @@ def main(args):
 
     forward_model.to(device)
 
+    baseline_model=copy.deepcopy(model)
     
     
     optimizer = optim.Adam([p for p in model.parameters()]+[p for p in forward_model.parameters()], lr=1e-4)
@@ -131,6 +135,7 @@ def main(args):
     for epoch in range(args.training_stage_1_epochs):
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,drop_last=True)
         running_loss=0.0
+        running_loss_baseline=0.0
         for b, (images, labels) in enumerate(train_loader):
             if b>=args.limit_per_epoch:
                 break
@@ -165,10 +170,30 @@ def main(args):
             optimizer.step()
 
             running_loss += loss.item()
+        
+        for b, (images, labels) in enumerate(train_loader):
+            if b>=args.limit_per_epoch:
+                break
+            images, labels = images.to(device), labels.to(device)
+
+            image_scale = torch.rand(args.batch_size, device=device)  # Shape: [batch_size]
+            noise_scale = 1 - image_scale  # Complementary scaling
+            noise=torch.randn(images.size()).to(device)
+            images = images * image_scale.view(-1, 1,1,1) + noise * noise_scale.view(-1, 1,1,1)
+
+            outputs=baseline_model(images)
+            loss = criterion(outputs, labels)
+
+            # Backward pass
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            running_loss += loss.item()
 
         print(f"Dual Training Epoch [{epoch+1}/{args.training_stage_1_epochs}], Loss: {running_loss/len(train_loader):.4f}")
 
-    test()
+    test(weight_list)
 
 if __name__=="__main__":
     args=parser.parse_args()
