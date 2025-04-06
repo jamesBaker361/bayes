@@ -193,6 +193,8 @@ def main(args):
     if args.use_fixed_image_scale_schedule:
         fixed_image_scale_list=[float(k)/args.training_stage_1_epochs for k in range(args.training_stage_1_epochs)][::-1]
 
+    baseline_accuracy_list=[]
+    accuracy_list=[]
     for epoch in range(args.training_stage_1_epochs):
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,drop_last=True)
         running_loss=0.0
@@ -263,6 +265,14 @@ def main(args):
         print(f"Dual Training Epoch [{epoch+1}/{args.training_stage_1_epochs}], Loss: {running_loss/len(train_loader):.4f} Baseline Loss: {running_loss_baseline/len(train_loader):.4f}")
         loss_list.append(running_loss)
         baseline_loss_list.append(running_loss_baseline)
+        if args.use_fixed_image_scale_schedule:
+            baseline_accuracy=test(model=baseline_model,fixed_image_scale=fixed_image_scale_list[epoch])
+            accuracy=test(weight_list=weight_list,fixed_image_scale=fixed_image_scale_list[epoch])
+        else:
+            baseline_accuracy=test(model=baseline_model)
+            accuracy=test(weight_list=weight_list)
+        baseline_accuracy_list.append(baseline_accuracy)
+        accuracy_list.append(accuracy)
     test(weight_list)
 
     x=[i for i in range(args.training_stage_1_epochs)]
@@ -277,7 +287,19 @@ def main(args):
     plt.grid(True)
 
     # **Save the figure instead of showing it**
-    plt.savefig(args.output_path, dpi=300, bbox_inches='tight')
+    plt.savefig("loss_"+args.output_path, dpi=300, bbox_inches='tight')
+
+    plt.plot(x, accuracy_list, label='With Noise + Prior Conditioning', linestyle='-', marker='o')
+    plt.plot(x, baseline_accuracy_list, label='Baseline', linestyle='--', marker='s')
+
+    # Labels and title
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy')
+    plt.legend()
+    plt.grid(True)
+
+    # **Save the figure instead of showing it**
+    plt.savefig("accuracy_"+args.output_path, dpi=300, bbox_inches='tight')
 
 if __name__=="__main__":
     args=parser.parse_args()
