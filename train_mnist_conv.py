@@ -6,7 +6,7 @@ import torchvision.datasets as datasets
 from torch.utils.data import DataLoader
 from torchvision.models.vision_transformer import vit_b_16
 import argparse
-from linear_model_src import NoiseConv
+from linear_model_src import NoiseConv,CustomConvWithExtra
 from random import random
 import copy
 import matplotlib.pyplot as plt
@@ -21,6 +21,8 @@ parser.add_argument("--batch_size",type=int,default=64)
 parser.add_argument("--no_prior",action="store_true")
 parser.add_argument("--output_path",type=str,default="graph.png")
 parser.add_argument("--use_fixed_image_scale_schedule",action="store_true")
+parser.add_argument("--layer_activations",action="store_true")
+parser.add_argument("--y_axis",type=str,default="Loss")
 
 def get_model_size(model):
     param_size = sum(p.numel() * p.element_size() for p in model.parameters())  # Parameters size
@@ -39,6 +41,40 @@ def get_weights_stats(model):
             stats[name]=layer_stats
     return stats
 
+def get_activations(model,activation_type:str,
+                    train_subset1:datasets.MNIST,
+                    batch_size:int,
+                    limit_per_epoch:int):
+    model.eval()
+    module_to_name = {module: name for name, module in model.named_modules()}
+    hooks = []
+    activations={}
+
+    def hook_fn(module, input, output):
+        name=module_to_name[module]
+        activations[name]=output.detach()
+
+    for module in model.modules():
+        if isinstance(module, (CustomConvWithExtra)):
+            hooks.append(module.register_forward_hook(hook_fn))
+
+    train_loader_activation = DataLoader(train_subset1, batch_size=batch_size*min(8,limit_per_epoch), shuffle=True,drop_last=True)
+    for (images,labels) in train_loader_activation:
+        break
+    images, labels = images.to(device), labels.to(device)
+    model(images)
+
+    for hook in hooks:
+        hook.remove()
+
+    if activation_type=="layer":
+        prior_list={key:[act.mean(),act.std()] for key,act in activations.items()}
+    elif activation_type=="feature":
+        prior_list={key:[act.mean(dim=0),act.std(dim=0)] for key,act in activations.items()}
+
+    return prior_list
+
+
 transform=transforms.Compose([
              transforms.ToTensor(),
              transforms.Normalize((0.5,), (0.5,)) , # Normalize to [-1, 1]
@@ -47,21 +83,38 @@ transform=transforms.Compose([
 
 def main(args):
     train_dataset = datasets.MNIST(root='./data', train=True, transform=transform, download=True)
+
+    # Define sizes for the split
+    lengths = [len(train_dataset) // 2, len(train_dataset) - len(train_dataset) // 2]
+
+    # Split dataset
+    train_subset1, train_subset2 = torch.utils.data.random_split(train_dataset, lengths)
     test_dataset = datasets.MNIST(root='./data', train=False, transform=transform, download=True)
 
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,drop_last=True)
+    train_loader_1 = DataLoader(train_subset1, batch_size=args.batch_size, shuffle=True,drop_last=True)
+    train_loader_2=DataLoader(train_subset2, batch_size=args.batch_size, shuffle=True,drop_last=True)
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False,drop_last=True)
 
     model=NoiseConv(args.forward_embedding_size,device)
 
-    weight_list=get_weights_stats(model)
-
+    if args.layer_activations:
+        weight_list=get_activations(model,"layer",train_subset1,args.batch_size,args.limit_per_epoch)
+    else:
+        weight_list=get_weights_stats(model)
     print(weight_list)
     
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
 
-    def test(weight_list=None,fixed_image_scale=None):
+    forward_model=nn.Sequential(
+        nn.Linear(3,8),
+        nn.LeakyReLU(),
+        nn.Linear(8,args.forward_embedding_size)
+    )
+
+    forward_model.to(device)
+
+    def test(weight_list=None,fixed_image_scale=None,model=model,forward_model=forward_model):
         model.eval()
         correct, total = 0, 0
         with torch.no_grad():
@@ -97,10 +150,11 @@ def main(args):
     
         print(f"Test Accuracy: {100 * correct / total:.2f}%")
         print(f"{100 * correct / total:.2f}")
+        return 100 * correct / total
 
     
     for epoch in range(args.training_stage_0_epochs):
-        train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,drop_last=True)
+        train_loader=DataLoader(train_subset2, batch_size=args.batch_size, shuffle=True,drop_last=True)
         model.train()
         running_loss = 0.0
         for b, (images, labels) in enumerate(train_loader):
@@ -125,14 +179,6 @@ def main(args):
     
 
     test()
-
-    forward_model=nn.Sequential(
-        nn.Linear(3,8),
-        nn.LeakyReLU(),
-        nn.Linear(8,args.forward_embedding_size)
-    )
-
-    forward_model.to(device)
 
     baseline_model=copy.deepcopy(model)
     baseline_optimizer=optim.Adam(baseline_model.parameters(),lr=1e-4)
@@ -219,14 +265,14 @@ def main(args):
         baseline_loss_list.append(running_loss_baseline)
     test(weight_list)
 
-    x=[i for i in range(args.traing_stage_1_epochs)]
+    x=[i for i in range(args.training_stage_1_epochs)]
     plt.figure(figsize=(8,5))
-    plt.plot(x, running_loss, label='With Noise + Prior Conditioning', linestyle='-', marker='o')
-    plt.plot(x, running_loss_baseline, label='Baseline', linestyle='--', marker='s')
+    plt.plot(x, loss_list, label='With Noise + Prior Conditioning', linestyle='-', marker='o')
+    plt.plot(x, baseline_loss_list, label='Baseline', linestyle='--', marker='s')
 
     # Labels and title
     plt.xlabel('Epochs')
-    plt.ylabel('Accuracy')
+    plt.ylabel('Loss')
     plt.legend()
     plt.grid(True)
 
