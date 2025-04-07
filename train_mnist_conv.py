@@ -288,6 +288,7 @@ def main(args):
 
     # **Save the figure instead of showing it**
     plt.savefig("loss_"+args.output_path, dpi=300, bbox_inches='tight')
+    plt.close()
 
     plt.plot(x, accuracy_list, label='With Noise + Prior Conditioning', linestyle='-', marker='o')
     plt.plot(x, baseline_accuracy_list, label='Baseline', linestyle='--', marker='s')
