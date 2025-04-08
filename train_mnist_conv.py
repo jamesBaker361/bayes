@@ -10,6 +10,7 @@ from linear_model_src import NoiseConv,CustomConvWithExtra
 from random import random
 import copy
 import matplotlib.pyplot as plt
+import itertools
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 parser = argparse.ArgumentParser(description="A simple argparse example")
@@ -21,6 +22,7 @@ parser.add_argument("--batch_size",type=int,default=64)
 parser.add_argument("--no_prior",action="store_true")
 parser.add_argument("--output_path",type=str,default="graph.png")
 parser.add_argument("--use_fixed_image_scale_schedule",action="store_true")
+parser.add_argument("--fixed_noise_eras",type=int,default=5)
 parser.add_argument("--layer_activations",action="store_true")
 parser.add_argument("--y_axis",type=str,default="Loss")
 
@@ -191,7 +193,13 @@ def main(args):
 
     fixed_image_scale_list=[]
     if args.use_fixed_image_scale_schedule:
-        fixed_image_scale_list=[float(k)/args.training_stage_1_epochs for k in range(args.training_stage_1_epochs)][::-1]
+        fixed_image_scale_list = [
+            [float(k)/args.fixed_noise_eras for _ in range(args.training_stage_1_epochs // args.fixed_noise_eras)]
+            for k in range(1, args.fixed_noise_eras + 1)
+        ][::-1]
+        fixed_image_scale_list = list(itertools.chain(*fixed_image_scale_list))
+
+        print('args.training_stage_1_epochs,len(fixed_image_scale_list)',args.training_stage_1_epochs,len(fixed_image_scale_list))
 
     baseline_accuracy_list=[]
     accuracy_list=[]
