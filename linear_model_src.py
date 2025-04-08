@@ -69,14 +69,15 @@ class CustomConvWithExtra(nn.Module):
         
         # Split the extra inputs into groups of `extra_channels_per_output` for each output channel
         extra_outs = []
-        #print('x.size()',x.size())
-        #print("extra_inputs.size()",extra_inputs.size())
+        print('x.size()',x.size())
+        print("extra_inputs.size()",extra_inputs.size())
         for i in range(out_channels):
             extra_inp = extra_inputs[:, i*self.extra_channels_per_output : (i+1)*self.extra_channels_per_output]
+            print('extra_inp.shape',extra_inp.shape)
             extra_inp=extra_inp.view(batch_size,self.extra_channels_per_output, 1,1).expand(batch_size,self.extra_channels_per_output,H,W)
-            #print(extra_inp.shape)
+            print('extra_inp.shape',extra_inp.shape)
             extra_out = self.extra_convs[i](extra_inp)  # Process extra inputs
-            #print(extra_out.shape)
+            print('extra_out.shape',extra_out.shape)
             extra_outs.append(extra_out)
         
         extra_out = torch.cat(extra_outs, dim=1)  # Stack along the channel dimension
@@ -88,10 +89,10 @@ class NoiseConv(nn.Module):
         super().__init__()  # Properly initialize nn.Module
         self.forward_embedding_size = forward_embedding_size
         self.device = device
-        self.layer_list=nn.ModuleList([CustomConvWithExtra(3, 16, kernel_size=7,extra_channels_per_output=3,bias=False),
+        self.layer_list=nn.ModuleList([CustomConvWithExtra(3, 16, kernel_size=7,extra_channels_per_output=forward_embedding_size,bias=False),
                     nn.BatchNorm2d(16, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                     nn.ReLU(inplace=True),
-                    CustomConvWithExtra(16,32,kernel_size=4,extra_channels_per_output=3,bias=False),
+                    CustomConvWithExtra(16,32,kernel_size=4,extra_channels_per_output=forward_embedding_size,bias=False),
                     nn.Flatten(),
                     nn.Linear(1152,10)])
         
@@ -111,6 +112,13 @@ class NoiseConv(nn.Module):
             else:
                 inputs=layer(inputs)
         return inputs
+    
+class NoiseConvCIFAR(NoiseConv):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.layer_list=nn.ModuleList([
+            CustomConvWithExtra(3,16,kernel_size=4,)
+        ])
     
 
 class FiLMConditioning(nn.Module):
