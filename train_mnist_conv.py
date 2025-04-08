@@ -289,8 +289,8 @@ def main(args):
 
     x=[i for i in range(args.training_stage_1_epochs)]
     plt.figure(figsize=(8,5))
-    plt.plot(x, loss_list, label='With Noise + Prior Conditioning', linestyle='-', marker='o')
-    plt.plot(x, baseline_loss_list, label='Baseline', linestyle='--', marker='s')
+    plt.plot(x, loss_list, label='With Forward Model', linestyle='-', marker='o')
+    plt.plot(x, baseline_loss_list, label='Trained Baseline', linestyle='--', marker='s')
 
     # Labels and title
     plt.xlabel('Epochs')
@@ -302,8 +302,9 @@ def main(args):
     plt.savefig("loss_"+args.output_path, dpi=300, bbox_inches='tight')
     plt.close()
 
-    plt.plot(x, accuracy_list, label='With Noise + Prior Conditioning', linestyle='-', marker='o')
-    plt.plot(x, baseline_accuracy_list, label='Baseline', linestyle='--', marker='s')
+    plt.plot(x, accuracy_list, label='With Forward Model', linestyle='-', marker='o')
+    plt.plot(x, baseline_accuracy_list, label='Trained Baseline', linestyle='--', marker='s')
+    plt.plot(x,untrained_accuracy_list,label="Untrained Baseline")
 
     # Labels and title
     plt.xlabel('Epochs')
