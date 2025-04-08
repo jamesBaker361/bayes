@@ -24,7 +24,6 @@ parser.add_argument("--output_path",type=str,default="graph.png")
 parser.add_argument("--use_fixed_image_scale_schedule",action="store_true")
 parser.add_argument("--fixed_noise_eras",type=int,default=5)
 parser.add_argument("--layer_activations",action="store_true")
-parser.add_argument("--y_axis",type=str,default="Loss")
 
 def get_model_size(model):
     param_size = sum(p.numel() * p.element_size() for p in model.parameters())  # Parameters size
@@ -182,6 +181,7 @@ def main(args):
 
     test()
 
+    untrained_model=copy.deepcopy(model)
     baseline_model=copy.deepcopy(model)
     baseline_optimizer=optim.Adam(baseline_model.parameters(),lr=1e-4)
     
@@ -203,6 +203,7 @@ def main(args):
 
     baseline_accuracy_list=[]
     accuracy_list=[]
+    untrained_accuracy_list=[]
     for epoch in range(args.training_stage_1_epochs):
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,drop_last=True)
         running_loss=0.0
@@ -276,11 +277,14 @@ def main(args):
         if args.use_fixed_image_scale_schedule:
             baseline_accuracy=test(model=baseline_model,fixed_image_scale=fixed_image_scale_list[epoch])
             accuracy=test(weight_list=weight_list,fixed_image_scale=fixed_image_scale_list[epoch])
+            untrained_accuracy=baseline_accuracy=test(model=untrained_model,fixed_image_scale=fixed_image_scale_list[epoch])
         else:
             baseline_accuracy=test(model=baseline_model)
             accuracy=test(weight_list=weight_list)
+            untrained_accuracy=baseline_accuracy=test(model=untrained_model)
         baseline_accuracy_list.append(baseline_accuracy)
         accuracy_list.append(accuracy)
+        untrained_accuracy_list.append(untrained_accuracy)
     test(weight_list)
 
     x=[i for i in range(args.training_stage_1_epochs)]
