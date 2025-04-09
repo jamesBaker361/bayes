@@ -193,7 +193,7 @@ def main(args):
         weight_list=get_activations(model,"layer",train_subset1,args.batch_size,args.limit_per_epoch)
     else:
         weight_list=get_weights_stats(model)
-    print(weight_list)
+    print('len(weight_list)',len(weight_list))
 
     untrained_model=copy.deepcopy(model)
     baseline_model=copy.deepcopy(model)
@@ -207,17 +207,18 @@ def main(args):
 
     fixed_image_scale_list=[]
     if args.use_fixed_image_scale_schedule:
-        fixed_image_scale_list = [
-            [float(k)/args.fixed_noise_eras for _ in range(args.training_stage_1_epochs // args.fixed_noise_eras)]
-            for k in range(1, args.fixed_noise_eras + 2)
-        ][::-1]
-        for row in fixed_image_scale_list:
-            print(row)
-        fixed_image_scale_list = list(itertools.chain(*fixed_image_scale_list))
+        fixed_image_scale_list = []
+        step=float(args.fixed_noise_eras)/args.training_stage_1_epochs
+        #noise=step
+        noise=0
+        for x in range(args.training_stage_1_epochs):
+            if x%args.fixed_noise_eras==0:
+                noise+=step
+            fixed_image_scale_list.append(noise)
 
-        print(fixed_image_scale_list)
+    print(fixed_image_scale_list)
 
-        print('args.training_stage_1_epochs,len(fixed_image_scale_list)',args.training_stage_1_epochs,len(fixed_image_scale_list))
+
 
     baseline_accuracy_list=[]
     accuracy_list=[]
@@ -319,6 +320,10 @@ def main(args):
     # **Save the figure instead of showing it**
     plt.savefig("loss_"+args.output_path, dpi=300, bbox_inches='tight')
     plt.close()
+
+    print('len(baseline_accuracy_list)',len(baseline_accuracy_list))
+    print('len(accuracy_list)',len(accuracy_list))
+    print('len(untrained_accuracy_list)',len(untrained_accuracy_list))
 
     plt.plot(x, accuracy_list, label='With Forward Model', linestyle='-', marker='o',color="red")
     plt.plot(x, baseline_accuracy_list, label='Trained Baseline', linestyle='--', marker='s',color="blue")
