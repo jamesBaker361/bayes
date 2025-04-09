@@ -300,7 +300,7 @@ def main(args):
         else:
             baseline_accuracy=test(model=baseline_model)
             accuracy=test(weight_list=weight_list)
-            untrained_accuracy=baseline_accuracy=test(model=untrained_model)
+            untrained_accuracy=test(model=untrained_model)
         baseline_accuracy_list.append(baseline_accuracy)
         accuracy_list.append(accuracy)
         untrained_accuracy_list.append(untrained_accuracy)
