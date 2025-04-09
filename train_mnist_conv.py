@@ -108,11 +108,7 @@ def main(args):
     if args.dataset=="mnist":
         model=NoiseConv(args.forward_embedding_size,device)
 
-    if args.layer_activations:
-        weight_list=get_activations(model,"layer",train_subset1,args.batch_size,args.limit_per_epoch)
-    else:
-        weight_list=get_weights_stats(model)
-    print(weight_list)
+    
     
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
@@ -190,6 +186,12 @@ def main(args):
     
 
     test()
+
+    if args.layer_activations:
+        weight_list=get_activations(model,"layer",train_subset1,args.batch_size,args.limit_per_epoch)
+    else:
+        weight_list=get_weights_stats(model)
+    print(weight_list)
 
     untrained_model=copy.deepcopy(model)
     baseline_model=copy.deepcopy(model)
