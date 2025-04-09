@@ -24,6 +24,7 @@ parser.add_argument("--output_path",type=str,default="graph.png")
 parser.add_argument("--use_fixed_image_scale_schedule",action="store_true")
 parser.add_argument("--fixed_noise_eras",type=int,default=5)
 parser.add_argument("--layer_activations",action="store_true")
+parser.add_argument("--dataset",type=str,default="mnist")
 
 def get_model_size(model):
     param_size = sum(p.numel() * p.element_size() for p in model.parameters())  # Parameters size
@@ -82,21 +83,30 @@ transform=transforms.Compose([
               transforms.Lambda(lambda x: x.repeat(3, 1, 1))  # Convert 1-channel to 3-channel
          ])
 
+cifar_transform=transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))  # Normalize with mean and std for RGB
+])
+
 def main(args):
-    train_dataset = datasets.MNIST(root='./data', train=True, transform=transform, download=True)
+    if args.dataset=="mnist":
+        train_dataset = datasets.MNIST(root='./data', train=True, transform=transform, download=True)
+        test_dataset = datasets.MNIST(root='./data', train=False, transform=transform, download=True)
+    else:
+        train_dataset = datasets.CIFAR100(root='./data', train=True, transform=cifar_transform, download=True)
+        test_dataset = datasets.CIFAR100(root='./data', train=False, transform=cifar_transform, download=True)
 
     # Define sizes for the split
     lengths = [len(train_dataset) // 2, len(train_dataset) - len(train_dataset) // 2]
 
     # Split dataset
     train_subset1, train_subset2 = torch.utils.data.random_split(train_dataset, lengths)
-    test_dataset = datasets.MNIST(root='./data', train=False, transform=transform, download=True)
+    
 
-    train_loader_1 = DataLoader(train_subset1, batch_size=args.batch_size, shuffle=True,drop_last=True)
-    train_loader_2=DataLoader(train_subset2, batch_size=args.batch_size, shuffle=True,drop_last=True)
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False,drop_last=True)
 
-    model=NoiseConv(args.forward_embedding_size,device)
+    if args.dataset=="mnist":
+        model=NoiseConv(args.forward_embedding_size,device)
 
     if args.layer_activations:
         weight_list=get_activations(model,"layer",train_subset1,args.batch_size,args.limit_per_epoch)
@@ -195,9 +205,13 @@ def main(args):
     if args.use_fixed_image_scale_schedule:
         fixed_image_scale_list = [
             [float(k)/args.fixed_noise_eras for _ in range(args.training_stage_1_epochs // args.fixed_noise_eras)]
-            for k in range(1, args.fixed_noise_eras + 1)
+            for k in range(1, args.fixed_noise_eras + 2)
         ][::-1]
+        for row in fixed_image_scale_list:
+            print(row)
         fixed_image_scale_list = list(itertools.chain(*fixed_image_scale_list))
+
+        print(fixed_image_scale_list)
 
         print('args.training_stage_1_epochs,len(fixed_image_scale_list)',args.training_stage_1_epochs,len(fixed_image_scale_list))
 
