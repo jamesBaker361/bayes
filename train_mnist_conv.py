@@ -6,7 +6,7 @@ import torchvision.datasets as datasets
 from torch.utils.data import DataLoader
 from torchvision.models.vision_transformer import vit_b_16
 import argparse
-from linear_model_src import NoiseConv,CustomConvWithExtra
+from linear_model_src import NoiseConv,CustomConvWithExtra,NoiseConvCIFAR
 from random import random
 import copy
 import matplotlib.pyplot as plt
@@ -107,6 +107,8 @@ def main(args):
 
     if args.dataset=="mnist":
         model=NoiseConv(args.forward_embedding_size,device)
+    else:
+        model=NoiseConvCIFAR(args.forward_embedding_size,device)
 
     
     
@@ -318,9 +320,9 @@ def main(args):
     plt.savefig("loss_"+args.output_path, dpi=300, bbox_inches='tight')
     plt.close()
 
-    plt.plot(x, accuracy_list, label='With Forward Model', linestyle='-', marker='o')
-    plt.plot(x, baseline_accuracy_list, label='Trained Baseline', linestyle='--', marker='s')
-    plt.plot(x,untrained_accuracy_list,label="Untrained Baseline")
+    plt.plot(x, accuracy_list, label='With Forward Model', linestyle='-', marker='o',color="red")
+    plt.plot(x, baseline_accuracy_list, label='Trained Baseline', linestyle='--', marker='s',color="blue")
+    plt.plot(x,untrained_accuracy_list,label="Untrained Baseline",linestyle='--', marker='s',color="green")
 
     # Labels and title
     plt.xlabel('Epochs')

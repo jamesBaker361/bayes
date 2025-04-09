@@ -45,39 +45,41 @@ class NoiseLinear(nn.Module):
     
 
 class CustomConvWithExtra(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, extra_channels_per_output=3,*args,**kwargs):
+    def __init__(self, in_channels, out_channels, kernel_size, forward_embedding_size=3,stride=None,padding="valid",*args,**kwargs):
         super().__init__()
-        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, padding=kernel_size//2,stride=kernel_size//2,*args,**kwargs)
-        self.extra_channels_per_output=extra_channels_per_output
-        # Each output channel gets extra_channels_per_output additional inputs
+        if stride==None:
+            stride=kernel_size//2
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, padding=padding,stride=stride,*args,**kwargs)
+        self.forward_embedding_size=forward_embedding_size
+        # Each output channel gets forward_embedding_size additional inputs
         self.extra_convs = nn.ModuleList([
-            nn.Conv2d(extra_channels_per_output, 1, kernel_size, padding=kernel_size//2,stride=kernel_size//2) 
+            nn.Conv2d(forward_embedding_size, 1, kernel_size, padding=padding,stride=stride) 
             for _ in range(out_channels)
         ])
         
     def forward(self, x:torch.Tensor, extra_inputs:torch.Tensor=None)->torch.Tensor:
         """
         x: Regular input tensor of shape [batch, in_channels, H, W]
-        extra_inputs: Tensor of shape [batch, out_channels * extra_channels_per_output, H, W]
+        extra_inputs: Tensor of shape [batch, out_channels * forward_embedding_size, H, W]
                       (Each output channel gets 3 extra channels)
         """
         main_out = self.conv(x)
         out_channels = len(self.extra_convs)
         batch_size, _, H, W = x.shape
         if extra_inputs==None:
-            extra_inputs=torch.zeros((batch_size,self.extra_channels_per_output*out_channels))
+            extra_inputs=torch.zeros((batch_size,self.forward_embedding_size*out_channels))
         
-        # Split the extra inputs into groups of `extra_channels_per_output` for each output channel
+        # Split the extra inputs into groups of `forward_embedding_size` for each output channel
         extra_outs = []
-        print('x.size()',x.size())
-        print("extra_inputs.size()",extra_inputs.size())
+        #print('x.size()',x.size())
+        #print("extra_inputs.size()",extra_inputs.size())
         for i in range(out_channels):
-            extra_inp = extra_inputs[:, i*self.extra_channels_per_output : (i+1)*self.extra_channels_per_output]
-            print('extra_inp.shape',extra_inp.shape)
-            extra_inp=extra_inp.view(batch_size,self.extra_channels_per_output, 1,1).expand(batch_size,self.extra_channels_per_output,H,W)
-            print('extra_inp.shape',extra_inp.shape)
+            extra_inp = extra_inputs[:, i*self.forward_embedding_size : (i+1)*self.forward_embedding_size]
+            #print('extra_inp.shape',extra_inp.shape)
+            extra_inp=extra_inp.view(batch_size,self.forward_embedding_size, 1,1).expand(batch_size,self.forward_embedding_size,H,W)
+            #print('extra_inp.shape',extra_inp.shape)
             extra_out = self.extra_convs[i](extra_inp)  # Process extra inputs
-            print('extra_out.shape',extra_out.shape)
+            #print('extra_out.shape',extra_out.shape)
             extra_outs.append(extra_out)
         
         extra_out = torch.cat(extra_outs, dim=1)  # Stack along the channel dimension
@@ -89,10 +91,10 @@ class NoiseConv(nn.Module):
         super().__init__()  # Properly initialize nn.Module
         self.forward_embedding_size = forward_embedding_size
         self.device = device
-        self.layer_list=nn.ModuleList([CustomConvWithExtra(3, 16, kernel_size=7,extra_channels_per_output=forward_embedding_size,bias=False),
+        self.layer_list=nn.ModuleList([CustomConvWithExtra(3, 16, kernel_size=7,forward_embedding_size=forward_embedding_size,bias=False),
                     nn.BatchNorm2d(16, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                     nn.ReLU(inplace=True),
-                    CustomConvWithExtra(16,32,kernel_size=4,extra_channels_per_output=forward_embedding_size,bias=False),
+                    CustomConvWithExtra(16,32,kernel_size=4,forward_embedding_size=forward_embedding_size,bias=False),
                     nn.Flatten(),
                     nn.Linear(1152,10)])
         
@@ -114,10 +116,30 @@ class NoiseConv(nn.Module):
         return inputs
     
 class NoiseConvCIFAR(NoiseConv):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self,forward_embedding_size: int, *args, **kwargs):
+        super().__init__(forward_embedding_size,*args, **kwargs)
         self.layer_list=nn.ModuleList([
-            CustomConvWithExtra(3,16,kernel_size=4,)
+            CustomConvWithExtra(3,16,kernel_size=2,stride=2),
+            nn.BatchNorm2d(16, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+            nn.ReLU(inplace=True),
+            CustomConvWithExtra(16,32,kernel_size=2,stride=1,padding="same"),
+            nn.BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+            nn.ReLU(inplace=True),
+            CustomConvWithExtra(32,64,kernel_size=2,stride=2),
+            nn.BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+            nn.ReLU(inplace=True),
+            CustomConvWithExtra(64,128,kernel_size=2,stride=1,padding="same"),
+            nn.BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+            nn.ReLU(inplace=True),
+            CustomConvWithExtra(128,256,kernel_size=2,stride=2),
+            nn.BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+            nn.ReLU(inplace=True),
+            CustomConvWithExtra(256,512,kernel_size=2,stride=1,padding="same"),
+            nn.BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+            nn.ReLU(inplace=True),
+            nn.Flatten(),
+            nn.Linear(512*4*4,100)
+
         ])
     
 
