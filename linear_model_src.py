@@ -45,10 +45,8 @@ class NoiseLinear(nn.Module):
     
 
 class CustomConvWithExtra(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, forward_embedding_size=3,stride=None,padding="valid",*args,**kwargs):
+    def __init__(self, in_channels, out_channels, kernel_size,stride,padding, forward_embedding_size=3,*args,**kwargs):
         super().__init__()
-        if stride==None:
-            stride=kernel_size//2
         self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, padding=padding,stride=stride,*args,**kwargs)
         self.forward_embedding_size=forward_embedding_size
         # Each output channel gets forward_embedding_size additional inputs
@@ -91,12 +89,12 @@ class NoiseConv(nn.Module):
         super().__init__()  # Properly initialize nn.Module
         self.forward_embedding_size = forward_embedding_size
         self.device = device
-        self.layer_list=nn.ModuleList([CustomConvWithExtra(3, 16, kernel_size=7,forward_embedding_size=forward_embedding_size,bias=False),
+        self.layer_list=nn.ModuleList([CustomConvWithExtra(3, 16, kernel_size=7,forward_embedding_size=forward_embedding_size,stride=3, padding=3,bias=False),
                     nn.BatchNorm2d(16, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                     nn.ReLU(inplace=True),
-                    CustomConvWithExtra(16,32,kernel_size=4,forward_embedding_size=forward_embedding_size,bias=False),
+                    CustomConvWithExtra(16,32,kernel_size=4,forward_embedding_size=forward_embedding_size,stride=4,padding=2,bias=False),
                     nn.Flatten(),
-                    nn.Linear(1152,10)])
+                    nn.Linear(288,10)])
         
         self.to(device)
 
@@ -116,22 +114,22 @@ class NoiseConv(nn.Module):
         return inputs
     
 class NoiseConvCIFAR(NoiseConv):
-    def __init__(self,forward_embedding_size: int, *args, **kwargs):
-        super().__init__(forward_embedding_size,*args, **kwargs)
+    def __init__(self,forward_embedding_size: int,device:str, *args, **kwargs):
+        super().__init__(forward_embedding_size,device,*args, **kwargs)
         self.layer_list=nn.ModuleList([
-            CustomConvWithExtra(3,16,kernel_size=2,stride=2),
+            CustomConvWithExtra(3,16,kernel_size=2,stride=2,padding="valid"),
             nn.BatchNorm2d(16, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
             nn.ReLU(inplace=True),
             CustomConvWithExtra(16,32,kernel_size=2,stride=1,padding="same"),
             nn.BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
             nn.ReLU(inplace=True),
-            CustomConvWithExtra(32,64,kernel_size=2,stride=2),
+            CustomConvWithExtra(32,64,kernel_size=2,stride=2,padding="valid"),
             nn.BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
             nn.ReLU(inplace=True),
             CustomConvWithExtra(64,128,kernel_size=2,stride=1,padding="same"),
             nn.BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
             nn.ReLU(inplace=True),
-            CustomConvWithExtra(128,256,kernel_size=2,stride=2),
+            CustomConvWithExtra(128,256,kernel_size=2,stride=2,padding="valid"),
             nn.BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
             nn.ReLU(inplace=True),
             CustomConvWithExtra(256,512,kernel_size=2,stride=1,padding="same"),
@@ -141,6 +139,8 @@ class NoiseConvCIFAR(NoiseConv):
             nn.Linear(512*4*4,100)
 
         ])
+        self.device=device
+        self.layer_list.to(device)
     
 
 class FiLMConditioning(nn.Module):
