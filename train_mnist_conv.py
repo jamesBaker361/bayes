@@ -215,6 +215,7 @@ def main(args):
             if x%args.fixed_noise_eras==0:
                 noise+=step
             fixed_image_scale_list.append(noise)
+    fixed_image_scale=fixed_image_scale[::-1]
 
     print(fixed_image_scale_list)
 
