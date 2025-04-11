@@ -195,7 +195,7 @@ def main(args):
 
         print(f"Dual Training Epoch [{epoch+1}/{args.training_stage_1_epochs}], Loss: {running_loss/len(train_loader_2):.4f}")
 
-    test()
+    test(prior_list)
 
 if __name__=="__main__":
     args=parser.parse_args()
