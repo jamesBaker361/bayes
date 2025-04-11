@@ -26,6 +26,7 @@ parser.add_argument("--fixed_noise_era_length",type=int,default=5)
 parser.add_argument("--layer_activations",action="store_true")
 parser.add_argument("--dataset",type=str,default="mnist")
 parser.add_argument("--image_scales",nargs="*",type=float)
+parser.add_argument("--prior_unknown_noise",action="store_true")
 
 def get_model_size(model):
     param_size = sum(p.numel() * p.element_size() for p in model.parameters())  # Parameters size
@@ -143,7 +144,7 @@ def main(args):
                     for key,value in weight_list.items():
                         layer_noise_embedding=[]
                         for prior in value:
-                            prior_tensor=torch.tensor([prior for _ in range(args.batch_size)])
+                            prior_tensor=torch.tensor([prior for _ in range(args.batch_size)]).to(device)
                             embedding_input=torch.cat([prior_tensor,noise_weight.view(args.batch_size,1)],dim=1)
                             #print("embedding_input.size()",embedding_input.size())
                             embedding_input.to(device)
@@ -198,13 +199,16 @@ def main(args):
 
     untrained_model=copy.deepcopy(model)
     baseline_model=copy.deepcopy(model)
+    unknown_noise_model=copy.deepcopy(model)
+    unknown_forward_model=copy.deepcopy(forward_model)
+    
     baseline_optimizer=optim.Adam(baseline_model.parameters(),lr=1e-4)
-    
-    
     optimizer = optim.Adam([p for p in model.parameters()]+[p for p in forward_model.parameters()], lr=1e-4)
-
+    unknown_optimizer=optim.Adam([p for p in unknown_noise_model.parameters()]+[p for p in unknown_forward_model.parameters()],lr=1e-4)
+    
     loss_list=[]
     baseline_loss_list=[]
+    unknown_loss_list=[]
 
     fixed_image_scale_list=[]
     if args.use_fixed_image_scale_schedule:
@@ -219,10 +223,12 @@ def main(args):
     baseline_accuracy_list=[]
     accuracy_list=[]
     untrained_accuracy_list=[]
+    unknown_noise_accuracy_list=[]
     for epoch in range(args.training_stage_1_epochs):
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,drop_last=True)
         running_loss=0.0
         running_loss_baseline=0.0
+        running_loss_unknown=0.0
         for b, (images, labels) in enumerate(train_loader):
             if b>=args.limit_per_epoch:
                 break
@@ -248,7 +254,7 @@ def main(args):
                     noise=forward_model(embedding_input)
                     #print('noise.size()',noise.size())
                     layer_noise_embedding.append(forward_model(embedding_input))
-                all_embeddings=torch.cat(layer_noise_embedding,dim=1)
+                all_embeddings=torch.cat(layer_noise_embedding,dim=1).to(device)
                 #print('all_embeddings.size()',all_embeddings.size())
                 layer_noise.append(all_embeddings)
 
@@ -269,7 +275,7 @@ def main(args):
 
             if args.use_fixed_image_scale_schedule:
                 fixed_image_scale=fixed_image_scale_list[epoch]
-                image_weight=torch.Tensor([fixed_image_scale for _ in range(args.batch_size)])
+                image_weight=torch.Tensor([fixed_image_scale for _ in range(args.batch_size)]).to(device)
             else:
                 image_weight = torch.rand(args.batch_size, device=device)  # Shape: [batch_size]
             noise_weight = 1 - image_weight  # Complementary scaling
@@ -285,14 +291,53 @@ def main(args):
             baseline_optimizer.step()
 
             running_loss_baseline += loss.item()
+        if args.prior_unknown_noise:
+            for b, (images, labels) in enumerate(train_loader):
+                if b>=args.limit_per_epoch:
+                    break
+                images, labels = images.to(device), labels.to(device)
 
+                if args.use_fixed_image_scale_schedule:
+                    fixed_image_scale=fixed_image_scale_list[epoch]
+                    image_weight=torch.Tensor([fixed_image_scale for _ in range(args.batch_size)]).to(device)
+                else:
+                    image_weight = torch.rand(args.batch_size, device=device)  # Shape: [batch_size]
+                noise_weight = 1 - image_weight  # Complementary scaling
+                noise=torch.randn(images.size()).to(device)
+                images = images * image_weight.view(-1, 1,1,1) + noise * noise_weight.view(-1, 1,1,1)
+
+                layer_noise=[]
+                for key,value in weight_list.items():
+                    layer_noise_embedding=[]
+                    for prior in value:
+                        prior_tensor=torch.tensor([prior for _ in range(args.batch_size)]).to(device)
+                        embedding_input=torch.cat([prior_tensor,torch.zeros((args.batch_size,1),device=device)],dim=1)
+                        #print("embedding_input.size()",embedding_input.size())
+                        embedding_input.to(device)
+                        noise=unknown_forward_model(embedding_input)
+                        #print('noise.size()',noise.size())
+                        layer_noise_embedding.append(noise)
+                    all_embeddings=torch.cat(layer_noise_embedding,dim=1).to(device)
+                    #print('all_embeddings.size()',all_embeddings.size())
+                    layer_noise.append(all_embeddings)
+
+                outputs=unknown_noise_model(images,layer_noise)
+                loss = criterion(outputs, labels)
+
+                # Backward pass
+                unknown_optimizer.zero_grad()
+                loss.backward()
+                unknown_optimizer.step()
+
+                running_loss_unknown += loss.item()
         print(f"Dual Training Epoch [{epoch+1}/{args.training_stage_1_epochs}], Loss: {running_loss/len(train_loader):.4f} Baseline Loss: {running_loss_baseline/len(train_loader):.4f}")
         loss_list.append(running_loss)
         baseline_loss_list.append(running_loss_baseline)
+        
         if args.use_fixed_image_scale_schedule:
             baseline_accuracy=test(model=baseline_model,fixed_image_scale=fixed_image_scale_list[epoch])
             accuracy=test(weight_list=weight_list,fixed_image_scale=fixed_image_scale_list[epoch])
-            untrained_accuracy=baseline_accuracy=test(model=untrained_model,fixed_image_scale=fixed_image_scale_list[epoch])
+            untrained_accuracy=test(model=untrained_model,fixed_image_scale=fixed_image_scale_list[epoch])
         else:
             baseline_accuracy=test(model=baseline_model)
             accuracy=test(weight_list=weight_list)
@@ -300,6 +345,13 @@ def main(args):
         baseline_accuracy_list.append(baseline_accuracy)
         accuracy_list.append(accuracy)
         untrained_accuracy_list.append(untrained_accuracy)
+        if args.prior_unknown_noise:
+            unknown_loss_list.append(running_loss_unknown)
+            if args.use_fixed_image_scale_schedule:
+                unknown_accuracy=test(model=unknown_noise_model,forward_model=unknown_forward_model,fixed_image_scale=fixed_image_scale_list[epoch])
+            else:
+                unknown_accuracy=test(model=unknown_noise_model,forward_model=unknown_forward_model)
+            unknown_noise_accuracy_list.append(unknown_accuracy)
     test(weight_list)
 
     x=[i for i in range(args.training_stage_1_epochs)]
@@ -322,6 +374,8 @@ def main(args):
     print('len(untrained_accuracy_list)',len(untrained_accuracy_list))
 
     plt.plot(x, accuracy_list, label='With Forward Model', linestyle='-', marker='o',color="red")
+    if args.prior_unknown_noise:
+        plt.plot(x, unknown_noise_accuracy_list, label='With Forward Model (Noise Unknown)', linestyle='-', marker='o',color="purple")
     plt.plot(x, baseline_accuracy_list, label='Trained Baseline', linestyle='--', marker='s',color="blue")
     plt.plot(x,untrained_accuracy_list,label="Untrained Baseline",linestyle='--', marker='s',color="green")
 
