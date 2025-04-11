@@ -55,17 +55,19 @@ class CustomConvWithExtra(nn.Module):
             for _ in range(out_channels)
         ])
         
+        
     def forward(self, x:torch.Tensor, extra_inputs:torch.Tensor=None)->torch.Tensor:
         """
         x: Regular input tensor of shape [batch, in_channels, H, W]
         extra_inputs: Tensor of shape [batch, out_channels * forward_embedding_size, H, W]
                       (Each output channel gets 3 extra channels)
         """
+        device= next(self.parameters()).device
         main_out = self.conv(x)
         out_channels = len(self.extra_convs)
         batch_size, _, H, W = x.shape
         if extra_inputs==None:
-            extra_inputs=torch.zeros((batch_size,self.forward_embedding_size*out_channels))
+            extra_inputs=torch.zeros((batch_size,self.forward_embedding_size*out_channels)).to(device)
         
         # Split the extra inputs into groups of `forward_embedding_size` for each output channel
         extra_outs = []
