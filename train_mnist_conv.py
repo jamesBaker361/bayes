@@ -22,9 +22,10 @@ parser.add_argument("--batch_size",type=int,default=64)
 parser.add_argument("--no_prior",action="store_true")
 parser.add_argument("--output_path",type=str,default="graph.png")
 parser.add_argument("--use_fixed_image_scale_schedule",action="store_true")
-parser.add_argument("--fixed_noise_eras",type=int,default=5)
+parser.add_argument("--fixed_noise_era_length",type=int,default=5)
 parser.add_argument("--layer_activations",action="store_true")
 parser.add_argument("--dataset",type=str,default="mnist")
+parser.add_argument("--image_scales",nargs="*",type=float)
 
 def get_model_size(model):
     param_size = sum(p.numel() * p.element_size() for p in model.parameters())  # Parameters size
@@ -207,15 +208,9 @@ def main(args):
 
     fixed_image_scale_list=[]
     if args.use_fixed_image_scale_schedule:
-        fixed_image_scale_list = []
-        step=float(args.fixed_noise_eras)/args.training_stage_1_epochs
-        #noise=step
-        noise=0
-        for x in range(args.training_stage_1_epochs):
-            if x%args.fixed_noise_eras==0:
-                noise+=step
-            fixed_image_scale_list.append(noise)
-    fixed_image_scale=fixed_image_scale[::-1]
+        for scale in args.image_scales:
+            for _ in range(args.fixed_noise_era_length):
+                fixed_image_scale_list.append(scale)
 
     print(fixed_image_scale_list)
 
