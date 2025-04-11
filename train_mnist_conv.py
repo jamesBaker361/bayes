@@ -230,7 +230,7 @@ def main(args):
 
             if args.use_fixed_image_scale_schedule:
                 fixed_image_scale=fixed_image_scale_list[epoch]
-                image_weight=torch.Tensor([fixed_image_scale for _ in range(args.batch_size)])
+                image_weight=torch.Tensor([fixed_image_scale for _ in range(args.batch_size)]).to(device)
             else:
                 image_weight = torch.rand(args.batch_size, device=device)  # Shape: [batch_size]
             noise_weight = 1 - image_weight  # Complementary scaling
