@@ -40,10 +40,11 @@ def get_weights_stats(model):
     for name, param in model.named_parameters():
         if param.requires_grad and name.find("conv.weight")!=-1:  # Only consider trainable parameters
             layer_stats=[]
-            for output_filter in range(len(param.data)):
+            #print("param.data.shape",name,param.data.shape)
+            '''for output_filter in range(len(param.data)):
                 layer_list= [param[output_filter].data.mean().item(),param[output_filter].data.std().item()]
-                layer_stats.append(layer_list)
-            stats[name]=layer_stats
+                layer_stats.append(layer_list)'''
+            stats[name]=[param.data.mean().item(), param.data.std().item()]
     return stats
 
 def get_activations(model,activation_type:str,
@@ -146,9 +147,11 @@ def main(args):
                         layer_noise_embedding=[]
                         for prior in value:
                             prior_tensor=torch.tensor([prior for _ in range(args.batch_size)]).to(device)
-                            '''if unknown_prior:
-                                prior_tensor=torch.tensor([[0,0] for _ in range(args.batch_size)]).to(device)'''
+                            if unknown_prior:
+                                prior_tensor=torch.tensor([[0,0] for _ in range(args.batch_size)]).to(device)
                             embedding_input=torch.cat([prior_tensor,noise_weight.view(args.batch_size,1)],dim=1)
+                            if unknown_noise:
+                                embedding_input=torch.cat([prior_tensor,torch.zeros((args.batch_size,1))],dim=1)
                             #print("embedding_input.size()",embedding_input.size())
                             embedding_input.to(device)
                             noise=forward_model(embedding_input)
