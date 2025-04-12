@@ -126,7 +126,7 @@ def main(args):
 
     forward_model.to(device)
 
-    def test(weight_list=None,fixed_image_scale=None,model=model,forward_model=forward_model):
+    def test(weight_list=None,fixed_image_scale=None,model=model,forward_model=forward_model,unknown_noise=False,unknown_prior=False):
         model.eval()
         correct, total = 0, 0
         with torch.no_grad():
@@ -146,6 +146,8 @@ def main(args):
                         layer_noise_embedding=[]
                         for prior in value:
                             prior_tensor=torch.tensor([prior for _ in range(args.batch_size)]).to(device)
+                            '''if unknown_prior:
+                                prior_tensor=torch.tensor([[0,0] for _ in range(args.batch_size)]).to(device)'''
                             embedding_input=torch.cat([prior_tensor,noise_weight.view(args.batch_size,1)],dim=1)
                             #print("embedding_input.size()",embedding_input.size())
                             embedding_input.to(device)
@@ -259,6 +261,7 @@ def main(args):
             for key,value in weight_list.items():
                 layer_noise_embedding=[]
                 for prior in value:
+                    print(key,prior)
                     prior_tensor=torch.tensor([prior for _ in range(args.batch_size)]).to(device)
                     embedding_input=torch.cat([prior_tensor,noise_weight.view(args.batch_size,1)],dim=1)
                     #print("embedding_input.size()",embedding_input.size())
@@ -435,6 +438,8 @@ def main(args):
     plt.plot(x, accuracy_list, label='With Forward Model', linestyle='-', marker='o',color="red")
     if args.prior_unknown_noise:
         plt.plot(x, unknown_noise_accuracy_list, label='With Forward Model (Noise Unknown)', linestyle='-', marker='o',color="purple")
+    if args.noise_unknown_prior:
+        plt.plot(x, unknown_prior_accuracy_list, label='With Forward Model (Prior Unknown)', linestyle='-', marker='o',color="orange")
     plt.plot(x, baseline_accuracy_list, label='Trained Baseline', linestyle='--', marker='s',color="blue")
     plt.plot(x,untrained_accuracy_list,label="Untrained Baseline",linestyle='--', marker='s',color="green")
 
