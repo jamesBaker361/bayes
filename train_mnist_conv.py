@@ -264,10 +264,11 @@ def main(args):
             for key,value in weight_list.items():
                 layer_noise_embedding=[]
                 for prior in value:
-                    print(key,prior)
+                    #print(key,prior)
                     prior_tensor=torch.tensor([prior for _ in range(args.batch_size)]).to(device)
+                    print('prior_tensor.size()',prior_tensor.size())
                     embedding_input=torch.cat([prior_tensor,noise_weight.view(args.batch_size,1)],dim=1)
-                    #print("embedding_input.size()",embedding_input.size())
+                    print("embedding_input.size()",embedding_input.size())
                     embedding_input.to(device)
                     noise=forward_model(embedding_input)
                     #print('noise.size()',noise.size())
@@ -406,16 +407,16 @@ def main(args):
         if args.prior_unknown_noise:
             unknown_noise_loss_list.append(running_loss_unknown_noise)
             if args.use_fixed_image_scale_schedule:
-                unknown_noise_accuracy=test(model=unknown_noise_model,forward_model=unknown_noise_forward_model,fixed_image_scale=fixed_image_scale_list[epoch])
+                unknown_noise_accuracy=test(model=unknown_noise_model,forward_model=unknown_noise_forward_model,fixed_image_scale=fixed_image_scale_list[epoch],unknown_noise=True)
             else:
-                unknown_noise_accuracy=test(model=unknown_noise_model,forward_model=unknown_noise_forward_model)
+                unknown_noise_accuracy=test(model=unknown_noise_model,forward_model=unknown_noise_forward_model,unknown_noise=True)
             unknown_noise_accuracy_list.append(unknown_noise_accuracy)
         if args.noise_unknown_prior:
             unknown_prior_loss_list.append(running_loss_unknown_prior)
             if args.use_fixed_image_scale_schedule:
-                unknown_prior_accuracy=test(model=unknown_prior_model,forward_model=unknown_prior_forward_model,fixed_image_scale=fixed_image_scale_list[epoch])
+                unknown_prior_accuracy=test(model=unknown_prior_model,forward_model=unknown_prior_forward_model,fixed_image_scale=fixed_image_scale_list[epoch],unknown_prior=True)
             else:
-                unknown_prior_accuracy=test(model=unknown_prior_model,forward_model=unknown_prior_forward_model)
+                unknown_prior_accuracy=test(model=unknown_prior_model,forward_model=unknown_prior_forward_model,unknown_prior=True)
             unknown_prior_accuracy_list.append(unknown_prior_accuracy)
     test(weight_list)
 
