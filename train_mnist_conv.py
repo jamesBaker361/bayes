@@ -429,8 +429,8 @@ def main(args):
 
         x=[i for i in range(len(accuracy_list))]
         plt.figure(figsize=(8,5))
-        plt.plot(x, loss_list, label='With Forward Model', linestyle='-', marker='o')
-        plt.plot(x, baseline_loss_list, label='Trained Baseline', linestyle='--', marker='s')
+        plt.plot([i for i in range(len(loss_list))], loss_list, label='With Forward Model', linestyle='-', marker='o')
+        plt.plot([i for i in range(len(baseline_loss_list))], baseline_loss_list, label='Trained Baseline', linestyle='--', marker='s')
 
         # Labels and title
         plt.xlabel('Epochs')
@@ -446,13 +446,13 @@ def main(args):
         print('len(accuracy_list)',len(accuracy_list))
         print('len(untrained_accuracy_list)',len(untrained_accuracy_list))
 
-        plt.plot(x, accuracy_list, label='With Forward Model', linestyle='-', marker='o',color="red")
+        plt.plot([i for i in range(len(accuracy_list))], accuracy_list, label='With Forward Model', linestyle='-', marker='o',color="red")
         if args.prior_unknown_noise:
-            plt.plot(x, unknown_noise_accuracy_list, label='With Forward Model (Noise Unknown)', linestyle='-', marker='o',color="purple")
+            plt.plot([i for i in range(len(unknown_noise_accuracy_list))], unknown_noise_accuracy_list, label='With Forward Model (Noise Unknown)', linestyle='-', marker='o',color="purple")
         if args.noise_unknown_prior:
-            plt.plot(x, unknown_prior_accuracy_list, label='With Forward Model (Prior Unknown)', linestyle='-', marker='o',color="orange")
-        plt.plot(x, baseline_accuracy_list, label='Trained Baseline', linestyle='--', marker='s',color="blue")
-        plt.plot(x,untrained_accuracy_list,label="Untrained Baseline",linestyle='--', marker='s',color="green")
+            plt.plot([i for i in range(len(unknown_prior_accuracy_list))], unknown_prior_accuracy_list, label='With Forward Model (Prior Unknown)', linestyle='-', marker='o',color="orange")
+        plt.plot([i for i in range(len(baseline_accuracy_list))], baseline_accuracy_list, label='Trained Baseline', linestyle='--', marker='s',color="blue")
+        plt.plot([i for i in range(len(untrained_accuracy_list))],untrained_accuracy_list,label="Untrained Baseline",linestyle='--', marker='s',color="green")
         text_file=args.output_path.replace("png","txt")
         with open(text_file,"w+") as file:
             writer=csv.writer(file)
@@ -473,12 +473,12 @@ def main(args):
         plt.savefig("accuracy_"+args.output_path, dpi=300, bbox_inches='tight')
         plt.close()
 
-        plt.plot(x, accuracy_list, label='With Forward Model', linestyle='-', marker='o',color="red")
+        plt.plot([i for i in range(len(accuracy_list))], accuracy_list, label='With Forward Model', linestyle='-', marker='o',color="red")
         if args.prior_unknown_noise:
-            plt.plot(x, unknown_noise_accuracy_list, label='With Forward Model (Noise Unknown)', linestyle='-', marker='o',color="purple")
+            plt.plot([i for i in range(len(unknown_noise_accuracy_list))], unknown_noise_accuracy_list, label='With Forward Model (Noise Unknown)', linestyle='-', marker='o',color="purple")
         if args.noise_unknown_prior:
-            plt.plot(x, unknown_prior_accuracy_list, label='With Forward Model (Prior Unknown)', linestyle='-', marker='o',color="orange")
-        plt.plot(x, baseline_accuracy_list, label='Trained Baseline', linestyle='--', marker='s',color="blue")
+            plt.plot([i for i in range(len(unknown_prior_accuracy_list))], unknown_prior_accuracy_list, label='With Forward Model (Prior Unknown)', linestyle='-', marker='o',color="orange")
+        plt.plot([i for i in range(len(baseline_accuracy_list))], baseline_accuracy_list, label='Trained Baseline', linestyle='--', marker='s',color="blue")
         plt.xlabel('Epochs')
         plt.ylabel('Accuracy')
         plt.legend()
