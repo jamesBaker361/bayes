@@ -370,7 +370,7 @@ def main(args):
                 for key,value in weight_list.items():
                     layer_noise_embedding=[]
                     for prior in value:
-                        prior_tensor=torch.tensor([0 for _ in range(args.batch_size)]).to(device)
+                        prior_tensor=torch.tensor([[0,0] for _ in range(args.batch_size)]).to(device)
                         embedding_input=torch.cat([prior_tensor,torch.zeros((args.batch_size,1),device=device)],dim=1)
                         #print("embedding_input.size()",embedding_input.size())
                         embedding_input.to(device)
