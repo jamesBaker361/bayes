@@ -120,11 +120,15 @@ def main(args):
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
 
-    forward_model=nn.Sequential(
-        nn.Linear(3,8),
-        nn.LeakyReLU(),
-        nn.Linear(8,args.forward_embedding_size)
-    )
+    def get_forward_model(n_input:int):
+        forward_model=nn.Sequential(
+            nn.Linear(n_input,8),
+            nn.LeakyReLU(),
+            nn.Linear(8,args.forward_embedding_size)
+        )
+        return forward_model
+    
+    forward_model=get_forward_model(3)
 
     forward_model.to(device)
 
@@ -149,10 +153,12 @@ def main(args):
                         for prior in value:
                             prior_tensor=torch.tensor([prior for _ in range(args.batch_size)]).to(device)
                             if unknown_prior:
-                                prior_tensor=torch.tensor([[0,0] for _ in range(args.batch_size)]).to(device)
-                            embedding_input=torch.cat([prior_tensor,noise_weight.view(args.batch_size,1)],dim=1)
-                            if unknown_noise:
-                                embedding_input=torch.cat([prior_tensor,torch.zeros((args.batch_size,1))],dim=1)
+                                prior_tensor=noise_weight.view(args.batch_size,1)
+                        
+                            elif unknown_noise:
+                                embedding_input=prior_tensor
+                            else:
+                                embedding_input=torch.cat([prior_tensor,noise_weight.view(args.batch_size,1)],dim=1)
                             #print("embedding_input.size()",embedding_input.size())
                             embedding_input.to(device)
                             noise=forward_model(embedding_input)
@@ -209,8 +215,8 @@ def main(args):
     baseline_model=copy.deepcopy(model)
     unknown_noise_model=copy.deepcopy(model)
     unknown_prior_model=copy.deepcopy(model)
-    unknown_noise_forward_model=copy.deepcopy(forward_model)
-    unknown_prior_forward_model=copy.deepcopy(forward_model)
+    unknown_noise_forward_model=get_forward_model(2).to(device)
+    unknown_prior_forward_model=get_forward_model(1).to(device)
     
     baseline_optimizer=optim.Adam(baseline_model.parameters(),lr=1e-4)
     optimizer = optim.Adam([p for p in model.parameters()]+[p for p in forward_model.parameters()], lr=1e-4)
@@ -331,7 +337,7 @@ def main(args):
                     layer_noise_embedding=[]
                     for prior in value:
                         prior_tensor=torch.tensor([prior for _ in range(args.batch_size)]).to(device)
-                        embedding_input=torch.cat([prior_tensor,torch.zeros((args.batch_size,1),device=device)],dim=1)
+                        embedding_input=prior_tensor
                         #print("embedding_input.size()",embedding_input.size())
                         embedding_input.to(device)
                         noise=unknown_noise_forward_model(embedding_input)
@@ -370,8 +376,8 @@ def main(args):
                 for key,value in weight_list.items():
                     layer_noise_embedding=[]
                     for prior in value:
-                        prior_tensor=torch.tensor([[0,0] for _ in range(args.batch_size)]).to(device)
-                        embedding_input=torch.cat([prior_tensor,torch.zeros((args.batch_size,1),device=device)],dim=1)
+                        #prior_tensor=torch.tensor([[0,0] for _ in range(args.batch_size)]).to(device)
+                        embedding_input=noise_weight.view(args.batch_size,1)
                         #print("embedding_input.size()",embedding_input.size())
                         embedding_input.to(device)
                         noise=unknown_prior_forward_model(embedding_input)
