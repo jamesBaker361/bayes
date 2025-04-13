@@ -425,67 +425,67 @@ def main(args):
             else:
                 unknown_prior_accuracy=test(model=unknown_prior_model,forward_model=unknown_prior_forward_model,unknown_prior=True)
             unknown_prior_accuracy_list.append(unknown_prior_accuracy)
-    test(weight_list)
 
-    x=[i for i in range(args.training_stage_1_epochs)]
-    plt.figure(figsize=(8,5))
-    plt.plot(x, loss_list, label='With Forward Model', linestyle='-', marker='o')
-    plt.plot(x, baseline_loss_list, label='Trained Baseline', linestyle='--', marker='s')
 
-    # Labels and title
-    plt.xlabel('Epochs')
-    plt.ylabel('Loss')
-    plt.legend()
-    plt.grid(True)
+        x=[i for i in range(args.training_stage_1_epochs)]
+        plt.figure(figsize=(8,5))
+        plt.plot(x, loss_list, label='With Forward Model', linestyle='-', marker='o')
+        plt.plot(x, baseline_loss_list, label='Trained Baseline', linestyle='--', marker='s')
 
-    # **Save the figure instead of showing it**
-    plt.savefig("loss_"+args.output_path, dpi=300, bbox_inches='tight')
-    plt.close()
+        # Labels and title
+        plt.xlabel('Epochs')
+        plt.ylabel('Loss')
+        plt.legend()
+        plt.grid(True)
 
-    print('len(baseline_accuracy_list)',len(baseline_accuracy_list))
-    print('len(accuracy_list)',len(accuracy_list))
-    print('len(untrained_accuracy_list)',len(untrained_accuracy_list))
+        # **Save the figure instead of showing it**
+        plt.savefig("loss_"+args.output_path, dpi=300, bbox_inches='tight')
+        plt.close()
 
-    plt.plot(x, accuracy_list, label='With Forward Model', linestyle='-', marker='o',color="red")
-    if args.prior_unknown_noise:
-        plt.plot(x, unknown_noise_accuracy_list, label='With Forward Model (Noise Unknown)', linestyle='-', marker='o',color="purple")
-    if args.noise_unknown_prior:
-        plt.plot(x, unknown_prior_accuracy_list, label='With Forward Model (Prior Unknown)', linestyle='-', marker='o',color="orange")
-    plt.plot(x, baseline_accuracy_list, label='Trained Baseline', linestyle='--', marker='s',color="blue")
-    plt.plot(x,untrained_accuracy_list,label="Untrained Baseline",linestyle='--', marker='s',color="green")
-    text_file=args.output_path.replace("png","txt")
-    with open(text_file,"w+") as file:
-        writer=csv.writer(file)
-        for model_name,acc_list in zip(["forward","trained_base","untrained_base"],[accuracy_list, baseline_accuracy_list, untrained_accuracy_list]):
-            writer.writerow([model_name]+acc_list)
+        print('len(baseline_accuracy_list)',len(baseline_accuracy_list))
+        print('len(accuracy_list)',len(accuracy_list))
+        print('len(untrained_accuracy_list)',len(untrained_accuracy_list))
+
+        plt.plot(x, accuracy_list, label='With Forward Model', linestyle='-', marker='o',color="red")
         if args.prior_unknown_noise:
-            writer.writerow(["noise_unknown"]+unknown_noise_accuracy_list)
+            plt.plot(x, unknown_noise_accuracy_list, label='With Forward Model (Noise Unknown)', linestyle='-', marker='o',color="purple")
         if args.noise_unknown_prior:
-            writer.writerow(["prior_unknown"]+unknown_prior_accuracy_list)
+            plt.plot(x, unknown_prior_accuracy_list, label='With Forward Model (Prior Unknown)', linestyle='-', marker='o',color="orange")
+        plt.plot(x, baseline_accuracy_list, label='Trained Baseline', linestyle='--', marker='s',color="blue")
+        plt.plot(x,untrained_accuracy_list,label="Untrained Baseline",linestyle='--', marker='s',color="green")
+        text_file=args.output_path.replace("png","txt")
+        with open(text_file,"w+") as file:
+            writer=csv.writer(file)
+            for model_name,acc_list in zip(["forward","trained_base","untrained_base"],[accuracy_list, baseline_accuracy_list, untrained_accuracy_list]):
+                writer.writerow([model_name]+acc_list)
+            if args.prior_unknown_noise:
+                writer.writerow(["noise_unknown"]+unknown_noise_accuracy_list)
+            if args.noise_unknown_prior:
+                writer.writerow(["prior_unknown"]+unknown_prior_accuracy_list)
 
-    # Labels and title
-    plt.xlabel('Epochs')
-    plt.ylabel('Accuracy')
-    plt.legend()
-    plt.grid(True)
+        # Labels and title
+        plt.xlabel('Epochs')
+        plt.ylabel('Accuracy')
+        plt.legend()
+        plt.grid(True)
 
-    # **Save the figure instead of showing it**
-    plt.savefig("accuracy_"+args.output_path, dpi=300, bbox_inches='tight')
-    plt.close()
+        # **Save the figure instead of showing it**
+        plt.savefig("accuracy_"+args.output_path, dpi=300, bbox_inches='tight')
+        plt.close()
 
-    plt.plot(x, accuracy_list, label='With Forward Model', linestyle='-', marker='o',color="red")
-    if args.prior_unknown_noise:
-        plt.plot(x, unknown_noise_accuracy_list, label='With Forward Model (Noise Unknown)', linestyle='-', marker='o',color="purple")
-    if args.noise_unknown_prior:
-        plt.plot(x, unknown_prior_accuracy_list, label='With Forward Model (Prior Unknown)', linestyle='-', marker='o',color="orange")
-    plt.plot(x, baseline_accuracy_list, label='Trained Baseline', linestyle='--', marker='s',color="blue")
-    plt.xlabel('Epochs')
-    plt.ylabel('Accuracy')
-    plt.legend()
-    plt.grid(True)
+        plt.plot(x, accuracy_list, label='With Forward Model', linestyle='-', marker='o',color="red")
+        if args.prior_unknown_noise:
+            plt.plot(x, unknown_noise_accuracy_list, label='With Forward Model (Noise Unknown)', linestyle='-', marker='o',color="purple")
+        if args.noise_unknown_prior:
+            plt.plot(x, unknown_prior_accuracy_list, label='With Forward Model (Prior Unknown)', linestyle='-', marker='o',color="orange")
+        plt.plot(x, baseline_accuracy_list, label='Trained Baseline', linestyle='--', marker='s',color="blue")
+        plt.xlabel('Epochs')
+        plt.ylabel('Accuracy')
+        plt.legend()
+        plt.grid(True)
 
-    # **Save the figure instead of showing it**
-    plt.savefig("good_accuracy_"+args.output_path, dpi=300, bbox_inches='tight')
+        # **Save the figure instead of showing it**
+        plt.savefig("good_accuracy_"+args.output_path, dpi=300, bbox_inches='tight')
 
 if __name__=="__main__":
     args=parser.parse_args()
