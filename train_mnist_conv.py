@@ -427,7 +427,7 @@ def main(args):
             unknown_prior_accuracy_list.append(unknown_prior_accuracy)
 
 
-        x=[i for i in range(args.training_stage_1_epochs)]
+        x=[i for i in range(len(accuracy_list))]
         plt.figure(figsize=(8,5))
         plt.plot(x, loss_list, label='With Forward Model', linestyle='-', marker='o')
         plt.plot(x, baseline_loss_list, label='Trained Baseline', linestyle='--', marker='s')
