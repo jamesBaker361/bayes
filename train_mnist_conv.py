@@ -465,6 +465,21 @@ def main(args):
 
     # **Save the figure instead of showing it**
     plt.savefig("accuracy_"+args.output_path, dpi=300, bbox_inches='tight')
+    plt.close()
+
+    plt.plot(x, accuracy_list, label='With Forward Model', linestyle='-', marker='o',color="red")
+    if args.prior_unknown_noise:
+        plt.plot(x, unknown_noise_accuracy_list, label='With Forward Model (Noise Unknown)', linestyle='-', marker='o',color="purple")
+    if args.noise_unknown_prior:
+        plt.plot(x, unknown_prior_accuracy_list, label='With Forward Model (Prior Unknown)', linestyle='-', marker='o',color="orange")
+    plt.plot(x, baseline_accuracy_list, label='Trained Baseline', linestyle='--', marker='s',color="blue")
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy')
+    plt.legend()
+    plt.grid(True)
+
+    # **Save the figure instead of showing it**
+    plt.savefig("good_accuracy_"+args.output_path, dpi=300, bbox_inches='tight')
 
 if __name__=="__main__":
     args=parser.parse_args()
