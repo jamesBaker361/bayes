@@ -5,6 +5,7 @@ import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 from torch.utils.data import DataLoader
 from torchvision.models.vision_transformer import vit_b_16
+import csv
 import argparse
 from linear_model_src import NoiseConv,CustomConvWithExtra,NoiseConvCIFAR
 from random import random
@@ -446,6 +447,15 @@ def main(args):
         plt.plot(x, unknown_prior_accuracy_list, label='With Forward Model (Prior Unknown)', linestyle='-', marker='o',color="orange")
     plt.plot(x, baseline_accuracy_list, label='Trained Baseline', linestyle='--', marker='s',color="blue")
     plt.plot(x,untrained_accuracy_list,label="Untrained Baseline",linestyle='--', marker='s',color="green")
+    text_file=args.output_path.replace("png","txt")
+    with open(text_file,"w+") as file:
+        writer=csv.writer(file)
+        for model_name,acc_list in zip(["forward","trained_base","untrained_base"],[accuracy_list, baseline_accuracy_list, untrained_accuracy_list]):
+            writer.writerow([model_name]+acc_list)
+        if args.prior_unknown_noise:
+            writer.writerow(["noise_unknown"]+unknown_noise_accuracy_list)
+        if args.noise_unknown_prior:
+            writer.writerow(["prior_unknown"]+unknown_prior_accuracy_list)
 
     # Labels and title
     plt.xlabel('Epochs')
