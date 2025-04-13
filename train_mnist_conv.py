@@ -266,9 +266,9 @@ def main(args):
                 for prior in value:
                     #print(key,prior)
                     prior_tensor=torch.tensor([prior for _ in range(args.batch_size)]).to(device)
-                    print('prior_tensor.size()',prior_tensor.size())
+                    #print('prior_tensor.size()',prior_tensor.size())
                     embedding_input=torch.cat([prior_tensor,noise_weight.view(args.batch_size,1)],dim=1)
-                    print("embedding_input.size()",embedding_input.size())
+                    #print("embedding_input.size()",embedding_input.size())
                     embedding_input.to(device)
                     noise=forward_model(embedding_input)
                     #print('noise.size()',noise.size())
