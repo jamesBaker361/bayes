@@ -136,7 +136,7 @@ def main(args):
                 if fixed_image_scale==None:
                     image_weight = torch.rand(args.batch_size, device=device)  # Shape: [batch_size]
                 else:
-                    image_weight = torch.Tensor([fixed_image_scale for _ in range(args.batch_size)])
+                    image_weight = torch.Tensor([fixed_image_scale for _ in range(args.batch_size)]).to(device)
                 noise_weight = 1 - image_weight  # Complementary scaling
                 noise=torch.randn(images.size()).to(device)
                 images = images * image_weight.view(-1, 1,1,1) + noise * noise_weight.view(-1, 1,1,1)
