@@ -41,10 +41,10 @@ def get_weights_stats(model):
         if param.requires_grad and name.find("conv.weight")!=-1:  # Only consider trainable parameters
             layer_stats=[]
             #print("param.data.shape",name,param.data.shape)
-            '''for output_filter in range(len(param.data)):
+            for output_filter in range(len(param.data)):
                 layer_list= [param[output_filter].data.mean().item(),param[output_filter].data.std().item()]
-                layer_stats.append(layer_list)'''
-            stats[name]=[param.data.mean().item(), param.data.std().item()]
+                layer_stats.append(layer_list)
+            stats[name]=layer_stats
     return stats
 
 def get_activations(model,activation_type:str,
