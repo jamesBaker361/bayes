@@ -236,7 +236,7 @@ def main(args):
         if image_scales==None:
             image_scales=[float(n)/args.training_stage_1_epochs for n in range(args.training_stage_1_epochs,0,- args.fixed_noise_era_length)]
         print(image_scales)
-        for scale in args.image_scales:
+        for scale in image_scales:
             for _ in range(args.fixed_noise_era_length):
                 fixed_image_scale_list.append(scale)
 
