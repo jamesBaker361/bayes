@@ -12,6 +12,7 @@ from random import random
 import copy
 import matplotlib.pyplot as plt
 import itertools
+import wandb
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 parser = argparse.ArgumentParser(description="A simple argparse example")
@@ -94,6 +95,7 @@ cifar_transform=transforms.Compose([
 ])
 
 def main(args):
+    wandb.init(project="bayes",config=vars)
     if args.dataset=="mnist":
         train_dataset = datasets.MNIST(root='./data', train=True, transform=transform, download=True)
         test_dataset = datasets.MNIST(root='./data', train=False, transform=transform, download=True)
@@ -411,6 +413,11 @@ def main(args):
         baseline_accuracy_list.append(baseline_accuracy)
         accuracy_list.append(accuracy)
         untrained_accuracy_list.append(untrained_accuracy)
+        metrics={
+            "baseline_accuracy":baseline_accuracy,
+            "accuracy":accuracy,
+            "untrained_accuracy":untrained_accuracy
+        }
         if args.prior_unknown_noise:
             unknown_noise_loss_list.append(running_loss_unknown_noise)
             if args.use_fixed_image_scale_schedule:
@@ -418,6 +425,7 @@ def main(args):
             else:
                 unknown_noise_accuracy=test(model=unknown_noise_model,forward_model=unknown_noise_forward_model,unknown_noise=True)
             unknown_noise_accuracy_list.append(unknown_noise_accuracy)
+            metrics["unknown_noise_accuracy"]=unknown_noise_accuracy
         if args.noise_unknown_prior:
             unknown_prior_loss_list.append(running_loss_unknown_prior)
             if args.use_fixed_image_scale_schedule:
@@ -425,6 +433,8 @@ def main(args):
             else:
                 unknown_prior_accuracy=test(model=unknown_prior_model,forward_model=unknown_prior_forward_model,unknown_prior=True)
             unknown_prior_accuracy_list.append(unknown_prior_accuracy)
+            metrics["unknown_prior_accuracy"]=unknown_prior_accuracy
+        wandb.log(metrics)
 
 
         x=[i for i in range(len(accuracy_list))]
