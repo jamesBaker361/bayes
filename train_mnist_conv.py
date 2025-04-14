@@ -95,7 +95,7 @@ cifar_transform=transforms.Compose([
 ])
 
 def main(args):
-    wandb.init(project="bayes",config=vars)
+    wandb.init(project="bayes",config=vars(args))
     if args.dataset=="mnist":
         train_dataset = datasets.MNIST(root='./data', train=True, transform=transform, download=True)
         test_dataset = datasets.MNIST(root='./data', train=False, transform=transform, download=True)
