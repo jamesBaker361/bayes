@@ -105,6 +105,46 @@ def recursively_replace(module:torch.nn.Module,forward_embedding_size:int):
           recursively_replace(child,forward_embedding_size)
     return module
 
+def forward_with_extra(model, x, extra_inputs):
+    conv_counter = 0
+    conv_modules = []
+
+    # Collect all CustomConvWithExtra modules in order
+    def collect_convs(module):
+        nonlocal conv_modules
+        for child in module.children():
+            if isinstance(child, CustomConvWithExtra):
+                conv_modules.append(child)
+            else:
+                collect_convs(child)
+
+    collect_convs(model)
+
+    # Wrap forward recursively
+    def forward_recursive(module, x):
+        nonlocal conv_counter
+
+        if isinstance(module, CustomConvWithExtra):
+            x = module(x, extra_inputs[conv_counter])
+            conv_counter += 1
+            return x
+
+        elif isinstance(module, nn.Sequential):
+            for child in module:
+                x = forward_recursive(child, x)
+            return x
+
+        elif isinstance(module, nn.Module):
+            for name, child in module.named_children():
+                x = forward_recursive(child, x)
+            return x
+
+        else:
+            return module(x)
+
+    return forward_recursive(model, x)
+
+
 class NoiseConv(nn.Module):
     def __init__(self,  forward_embedding_size: int, device: str="cpu"):
         super().__init__()  # Properly initialize nn.Module
