@@ -96,6 +96,14 @@ class CustomConvWithExtra(nn.Module):
         extra_out = torch.cat(extra_outs, dim=1)  # Stack along the channel dimension
         #print(extra_out.shape)
         return main_out + extra_out  # Merge the outputs
+    
+def recursively_replace(module:torch.nn.Module,forward_embedding_size:int):
+    for name, child in module.named_children():
+        if isinstance(child, nn.Conv2d):
+          setattr(module,name,CustomConvWithExtra.from_conv(child))
+        else:
+          recursively_replace(child,forward_embedding_size)
+    return module
 
 class NoiseConv(nn.Module):
     def __init__(self,  forward_embedding_size: int, device: str="cpu"):
