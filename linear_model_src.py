@@ -45,6 +45,17 @@ class NoiseLinear(nn.Module):
     
 
 class CustomConvWithExtra(nn.Module):
+    @classmethod
+    def from_conv(cls,child:torch.nn.Conv2d,forward_embedding_size:int=3):
+        out_channels=child.out_channels
+        in_channels=child.in_channels
+        stride=child.stride
+        padding=child.padding
+        kernel_size=child.kernel_size
+        new_layer=cls(in_channels,out_channels,kernel_size,stride,padding)
+        new_layer.conv=child
+        return new_layer
+    
     def __init__(self, in_channels, out_channels, kernel_size,stride,padding, forward_embedding_size=3,*args,**kwargs):
         super().__init__()
         self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, padding=padding,stride=stride,*args,**kwargs)
