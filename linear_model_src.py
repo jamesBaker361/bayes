@@ -274,7 +274,7 @@ class NoiseEfficientNet(nn.Module):
         self.classification=nn.Linear(1280* 7*7,100)
         self.efficientnet=recursively_replace(efficientnet,forward_embedding_size)
 
-    def forward(self, inputs: torch.Tensor, layer_noise:list) -> torch.Tensor:
+    def forward(self, inputs: torch.Tensor, layer_noise:list=None) -> torch.Tensor:
         inputs = inputs.to(self.device)  # Move inputs to device
 
         if layer_noise==None:
