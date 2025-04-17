@@ -321,5 +321,4 @@ class NoiseEfficientNet(nn.Module):
         outputs= forward_recursive(self, inputs)
         outputs=self.flatten(outputs)
         outputs=self.classification(outputs)
-
-
+        return outputs
