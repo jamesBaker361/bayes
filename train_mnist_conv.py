@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from torchvision.models.vision_transformer import vit_b_16
 import csv
 import argparse
-from linear_model_src import NoiseConv,CustomConvWithExtra,NoiseConvCIFAR
+from linear_model_src import NoiseConv,CustomConvWithExtra,NoiseConvCIFAR,NoiseEfficientNet
 from random import random
 import copy
 import matplotlib.pyplot as plt
@@ -95,14 +95,29 @@ cifar_transform=transforms.Compose([
     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))  # Normalize with mean and std for RGB
 ])
 
+efficient_transform=transforms.Compose([
+    transforms.ToTensor(),
+    transforms.resize((224,224)),
+    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))  # Normalize with mean and std for RGB
+])
+
 def main(args):
     wandb.init(project="bayes",config=vars(args))
+    
+
     if args.dataset=="mnist":
+        model=NoiseConv(args.forward_embedding_size,device)
         train_dataset = datasets.MNIST(root='./data', train=True, transform=transform, download=True)
         test_dataset = datasets.MNIST(root='./data', train=False, transform=transform, download=True)
     else:
-        train_dataset = datasets.CIFAR100(root='./data', train=True, transform=cifar_transform, download=True)
-        test_dataset = datasets.CIFAR100(root='./data', train=False, transform=cifar_transform, download=True)
+        if args.pretrained_model not in ["efficient"]:
+            train_dataset = datasets.CIFAR100(root='./data', train=True, transform=cifar_transform, download=True)
+            test_dataset = datasets.CIFAR100(root='./data', train=False, transform=cifar_transform, download=True)
+            model=NoiseConvCIFAR(args.forward_embedding_size,device)
+        elif args.pretrained_model=="efficient":
+            model=NoiseEfficientNet(args.forward_embedding_size)
+            train_dataset = datasets.CIFAR100(root='./data', train=True, transform=efficient_transform, download=True)
+            test_dataset = datasets.CIFAR100(root='./data', train=False, transform=efficient_transform, download=True)
 
     # Define sizes for the split
     lengths = [len(train_dataset) // 2, len(train_dataset) - len(train_dataset) // 2]
@@ -112,13 +127,6 @@ def main(args):
     
 
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False,drop_last=True)
-
-    if args.dataset=="mnist":
-        model=NoiseConv(args.forward_embedding_size,device)
-    else:
-        model=NoiseConvCIFAR(args.forward_embedding_size,device)
-
-    
     
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
