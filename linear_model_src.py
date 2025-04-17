@@ -278,8 +278,7 @@ class NoiseEfficientNet(nn.Module):
     def forward(self, inputs: torch.Tensor, layer_noise:list=None) -> torch.Tensor:
         inputs = inputs.to(self.device)  # Move inputs to device
 
-        if layer_noise==None:
-            layer_noise=[None for _ in range(len(self.layer_list))]
+        
         conv_counter = 0
         conv_modules = []
 
@@ -293,6 +292,9 @@ class NoiseEfficientNet(nn.Module):
                     collect_convs(child)
 
         collect_convs(self)
+
+        if layer_noise==None:
+            layer_noise=[None for _ in range(len(conv_modules))]
 
         # Wrap forward recursively
         def forward_recursive(module, x):
