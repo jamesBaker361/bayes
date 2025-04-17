@@ -264,3 +264,59 @@ class NoiseLinearFILM(nn.Module):
                 inputs = layer(inputs)
 
         return inputs
+    
+class NoiseEfficientNet(nn.Module):
+    def __init__(self,forward_embedding_size:int ,*args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.forward_embedding_size=forward_embedding_size
+        efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_b0', pretrained=True)
+        self.classification=nn.Sequential([
+            nn.Flatten(),
+            nn.Linear(1280* 7*7,100)
+        ])
+        self.efficientnet=recursively_replace(efficientnet,forward_embedding_size)
+
+    def forward(self, inputs: torch.Tensor, layer_noise:list) -> torch.Tensor:
+        inputs = inputs.to(self.device)  # Move inputs to device
+
+        if layer_noise==None:
+            layer_noise=[None for _ in range(len(self.layer_list))]
+        conv_counter = 0
+        conv_modules = []
+
+        # Collect all CustomConvWithExtra modules in order
+        def collect_convs(module):
+            nonlocal conv_modules
+            for child in module.children():
+                if isinstance(child, CustomConvWithExtra):
+                    conv_modules.append(child)
+                else:
+                    collect_convs(child)
+
+        collect_convs(self)
+
+        # Wrap forward recursively
+        def forward_recursive(module, x):
+            nonlocal conv_counter
+
+            if isinstance(module, CustomConvWithExtra):
+                x = module(x, layer_noise[conv_counter])
+                conv_counter += 1
+                return x
+
+            elif isinstance(module, nn.Sequential):
+                for child in module:
+                    x = forward_recursive(child, x)
+                return x
+
+            elif isinstance(module, nn.Module):
+                for name, child in module.named_children():
+                    x = forward_recursive(child, x)
+                return x
+
+            else:
+                return module(x)
+
+        return forward_recursive(self, inputs)
+
+
