@@ -270,10 +270,8 @@ class NoiseEfficientNet(nn.Module):
         super().__init__(*args, **kwargs)
         self.forward_embedding_size=forward_embedding_size
         efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_b0', pretrained=True)
-        self.classification=nn.Sequential([
-            nn.Flatten(),
-            nn.Linear(1280* 7*7,100)
-        ])
+        self.flatten=nn.Flatten()
+        self.classification=nn.Linear(1280* 7*7,100)
         self.efficientnet=recursively_replace(efficientnet,forward_embedding_size)
 
     def forward(self, inputs: torch.Tensor, layer_noise:list) -> torch.Tensor:
@@ -317,6 +315,8 @@ class NoiseEfficientNet(nn.Module):
             else:
                 return module(x)
 
-        return forward_recursive(self, inputs)
+        outputs= forward_recursive(self, inputs)
+        outputs=self.flatten(outputs)
+        outputs=self.classification(outputs)
 
 
