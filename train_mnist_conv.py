@@ -115,7 +115,7 @@ def main(args):
             test_dataset = datasets.CIFAR100(root='./data', train=False, transform=cifar_transform, download=True)
             model=NoiseConvCIFAR(args.forward_embedding_size,device)
         elif args.pretrained_model=="efficient":
-            model=NoiseEfficientNet(args.forward_embedding_size)
+            model=NoiseEfficientNet(args.forward_embedding_size,device)
             train_dataset = datasets.CIFAR100(root='./data', train=True, transform=efficient_transform, download=True)
             test_dataset = datasets.CIFAR100(root='./data', train=False, transform=efficient_transform, download=True)
 
