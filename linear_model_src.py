@@ -266,13 +266,14 @@ class NoiseLinearFILM(nn.Module):
         return inputs
     
 class NoiseEfficientNet(nn.Module):
-    def __init__(self,forward_embedding_size:int ,*args, **kwargs):
+    def __init__(self,forward_embedding_size:int ,device:str,*args, **kwargs):
         super().__init__(*args, **kwargs)
         self.forward_embedding_size=forward_embedding_size
         efficientnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_b0', pretrained=True)
-        self.flatten=nn.Flatten()
-        self.classification=nn.Linear(1280* 7*7,100)
-        self.efficientnet=recursively_replace(efficientnet,forward_embedding_size)
+        self.flatten=nn.Flatten().to(device)
+        self.classification=nn.Linear(1280* 7*7,100).to(device)
+        self.efficientnet=recursively_replace(efficientnet,forward_embedding_size).to(device)
+        self.device=device
 
     def forward(self, inputs: torch.Tensor, layer_noise:list=None) -> torch.Tensor:
         inputs = inputs.to(self.device)  # Move inputs to device
