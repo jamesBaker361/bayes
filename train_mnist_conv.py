@@ -30,6 +30,7 @@ parser.add_argument("--dataset",type=str,default="mnist")
 parser.add_argument("--image_scales",nargs="*",type=float)
 parser.add_argument("--prior_unknown_noise",action="store_true")
 parser.add_argument("--noise_unknown_prior",action="store_true")
+parser.add_argument("--pretrained_model",type=str,default="",help="whether to use a pretrained model for task")
 
 def get_model_size(model):
     param_size = sum(p.numel() * p.element_size() for p in model.parameters())  # Parameters size
