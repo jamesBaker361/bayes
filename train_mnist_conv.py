@@ -97,7 +97,7 @@ cifar_transform=transforms.Compose([
 
 efficient_transform=transforms.Compose([
     transforms.ToTensor(),
-    transforms.resize((224,224)),
+    transforms.Resize((224,224)),
     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))  # Normalize with mean and std for RGB
 ])
 
