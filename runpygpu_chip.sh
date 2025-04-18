@@ -14,7 +14,7 @@
 
 #SBATCH --mem=32000                # Real memory (RAM) required (MB)
 
-#SBATCH --time=3-00:00:00           # Total run time limit (D-HH:MM:SS)
+#SBATCH --time=4-00:00:00           # Total run time limit (D-HH:MM:SS)
 
 #SBATCH --output=slurm/out/%j.out  # STDOUT output file
 
@@ -28,13 +28,13 @@ module load slurm/ada-slurm/23.02.1
 module load CUDA/11.7.0
 source venv/bin/activate
 export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:64
-export TRANSFORMERS_CACHE="donengel_ada/common/trans_cache"
-export HF_HOME="donengel_ada/common/trans_cache"
-export HF_HUB_CACHE="donengel_ada/common/trans_cache"
-export TORCH_CACHE="donengel_ada/common/torch_cache/"
-export WANDB_DIR="donengel_ada/common/wandb"
-export WANDB_CACHE_DIR="donengel_ada/common/wandb_cache"
-export HPS_ROOT="donengel_ada/common/hps-cache"
-export IMAGE_REWARD_PATH="donengel_ada/common/reward-blob"
-export IMAGE_REWARD_CONFIG="donengel_ada/common/ImageReward/med_config.json"
+export TRANSFORMERS_CACHE="/umbc/ada/donengel/common/trans_cache"
+export HF_HOME="/umbc/ada/donengel/common/trans_cache"
+export HF_HUB_CACHE="/umbc/ada/donengel/common/trans_cache"
+export TORCH_CACHE="/umbc/ada/donengel/common/torch_cache/"
+export WANDB_DIR="/umbc/ada/donengel/common/wandb"
+export WANDB_CACHE_DIR="/umbc/ada/donengel/common/wandb_cache"
+export HPS_ROOT="/umbc/ada/donengel/common/hps-cache"
+export IMAGE_REWARD_PATH="/umbc/ada/donengel/common/reward-blob"
+export IMAGE_REWARD_CONFIG="/umbc/ada/donengel/common/ImageReward/med_config.json"
 srun python -u $@
