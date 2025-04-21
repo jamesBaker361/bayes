@@ -110,14 +110,12 @@ def main(args):
         train_dataset = datasets.MNIST(root='./data', train=True, transform=transform, download=True)
         test_dataset = datasets.MNIST(root='./data', train=False, transform=transform, download=True)
     else:
+        train_dataset = datasets.CIFAR100(root='./data', train=True, transform=cifar_transform, download=True)
+        test_dataset = datasets.CIFAR100(root='./data', train=False, transform=cifar_transform, download=True)
         if args.pretrained_model not in ["efficient"]:
-            train_dataset = datasets.CIFAR100(root='./data', train=True, transform=cifar_transform, download=True)
-            test_dataset = datasets.CIFAR100(root='./data', train=False, transform=cifar_transform, download=True)
             model=NoiseConvCIFAR(args.forward_embedding_size,device)
         elif args.pretrained_model=="efficient":
             model=NoiseEfficientNet(args.forward_embedding_size,device)
-            train_dataset = datasets.CIFAR100(root='./data', train=True, transform=efficient_transform, download=True)
-            test_dataset = datasets.CIFAR100(root='./data', train=False, transform=efficient_transform, download=True)
 
     # Define sizes for the split
     lengths = [len(train_dataset) // 2, len(train_dataset) - len(train_dataset) // 2]
